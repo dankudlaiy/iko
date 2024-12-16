@@ -22,6 +22,7 @@
     "primeicons": "^7.0.0",
     "primeng": "^18.0.0",
     "rxjs": "~7.8.0",
+    "tailwindcss-primeui": "^0.3.4",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.3"
   },
@@ -36,6 +37,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.4.2"
+    "typescript": "^5.5.4"
   }
 }
