@@ -1,0 +1,13 @@
+/* Center the container */
+.p-d-flex {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+/* Add spacing between elements */
+.p-mt-3 {
+  margin-top: 10px;
+}
