@@ -1,0 +1,6 @@
+﻿services:
+  iko-host:
+    image: iko-host
+    build:
+      context: .
+      dockerfile: iko-host/Dockerfile
