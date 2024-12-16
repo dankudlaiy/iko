@@ -10,7 +10,7 @@ public class VkClient
     public async Task<List<TrackModel>> ParseVkPlaylist(string url)
     {
         var options = new ChromeOptions();
-        
+
         options.AddArgument("--headless");
         using var driver = new ChromeDriver(options);
         await driver.Navigate().GoToUrlAsync(url);

@@ -21,3 +21,7 @@
   margin-bottom: 5px; /* Adds space between the label and input field */
   text-align: center; /* Centers the label text */
 }
+
+.mt-3 {
+  margin-top: 1rem;
+}

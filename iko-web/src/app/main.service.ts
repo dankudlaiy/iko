@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class MainService {
 
-  private apiUrl = 'https://localhost:44389/transfer-playlist';
+  private apiUrl = 'https://localhost:7158/parse';
   constructor(private http: HttpClient) { }
 
   transferPlaylist(link: string): Observable<any> {
