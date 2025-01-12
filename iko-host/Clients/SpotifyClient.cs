@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class SpotifyClient
 {
-    public const string RedirectUri = "https://localhost:44389/api/callback";
+    public const string RedirectUri = "http://localhost:4200/callback";
 
     private readonly HttpClient _httpClient = new();
 
@@ -28,12 +28,12 @@ public class SpotifyClient
                         throw new InvalidOperationException("Can not retrieve client secret from .env file");
     }
 
-    public async Task<TrackModel?> SearchForTrack(string trackName)
+    public async Task<TrackModel?> SearchForTrack(string name, string artist)
     {
         var accessToken = await GetAccessToken();
 
         var request = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.spotify.com/v1/search?type=track&limit=1&q={Uri.EscapeUriString(trackName)}");
+            $"https://api.spotify.com/v1/search?type=track&limit=1&q={Uri.EscapeUriString($"{name} {artist}")}");
         
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
 
@@ -50,12 +50,12 @@ public class SpotifyClient
         string trackId = obj!.tracks.items[0].id;
         string imageUrl = obj.tracks.items[0].album.images[0].url;
 
-        var response = new TrackModel { SpotifyId = trackId, ImageUrl = imageUrl };
+        var response = new TrackModel { Name = name, Artist = artist, SpotifyId = trackId, ImageUrl = imageUrl };
 
         return response;
     }
 
-    public async Task<string> CreatePlaylist(IEnumerable<TrackModel> tracks, string accessToken)
+    public async Task<string> CreatePlaylist(IEnumerable<string> ids, string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.spotify.com/v1/me");
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
@@ -89,7 +89,7 @@ public class SpotifyClient
         
         var addTracksUri = new Uri($"https://api.spotify.com/v1/playlists/{playlistId}/tracks");
         
-        var trackUris = tracks.Select(t => "spotify:track:" + t.SpotifyId).ToList();
+        var trackUris = ids.Select(t => "spotify:track:" + t).ToList();
 
         const int chunkSize = 100;
         for (var i = 0; i < trackUris.Count; i += chunkSize)
@@ -117,7 +117,7 @@ public class SpotifyClient
         return playlistUrl;
     }
 
-    public async Task<SpotifyTokenResponse> ObtainAccessToken(string authToken)
+    public async Task<SpotifyTokenResponse?> ObtainAccessToken(string authToken)
     {
         using var request = new HttpRequestMessage(new HttpMethod("POST"), "https://accounts.spotify.com/api/token");
         

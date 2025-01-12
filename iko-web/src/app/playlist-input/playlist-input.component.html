@@ -1,0 +1,19 @@
+<div class="p-field">
+  <label for="playlist" class="p-d-block">Playlist Link</label>
+  <input
+    id="playlist"
+    type="text"
+    pInputText
+    placeholder="Enter playlist link"
+    [(ngModel)]="playlistLink"
+  />
+</div>
+<button
+  pButton
+  type="button"
+  label="Go to Tracks"
+  class="p-mt-3"
+  (click)="navigateToTracks()"
+></button>
+
+<button (click)="authorizeSpotify()">Authorize with Spotify</button>

@@ -1,0 +1,36 @@
+<div *ngIf="isLoading" class="loading-spinner">
+  <div class="loader"></div>
+</div>
+
+<div *ngIf="errorMessage" class="error-message">
+  <p>{{ errorMessage }}</p>
+</div>
+
+<div *ngIf="!isLoading && !errorMessage" class="track-list-container">
+  <div class="button-group">
+    <button pButton type="button" label="Back" (click)="goBack()"></button>
+    <button pButton type="button" label="Create playlist" (click)="createPlaylist()"></button>
+    <button (click)="authorizeSpotify()">Authorize with Spotify</button>
+  </div>
+
+  <div>
+    <a [href]="createdPlaylist" target="_blank">{{ createdPlaylist }}</a>
+  </div>
+
+  <div class="track-list">
+    <table>
+      <tbody>
+      <tr *ngFor="let track of tracks; let i = index">
+        <td>
+          <button pButton type="button" icon="pi pi-times" class="p-button-danger" (click)="removeTrack(i)"></button>
+        </td>
+        <td>{{ track.name }} - {{ track.artist}}</td>
+<!--        <td>{{ track.spotifyId || 'Not Available' }}</td>-->
+        <td>
+          <img *ngIf="track.imageUrl" [ngSrc]="track.imageUrl" alt="Track Image" width="50" height="50" />
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
