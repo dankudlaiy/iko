@@ -21,7 +21,7 @@ public class VkClient
         var button = driver.FindElement(By.ClassName("AudioPlaylistSnippet__actionButton"));
         button.Click();
         
-        await Task.Delay(4000);
+        // await Task.Delay(4000);
     
         var songElements = driver.FindElements(By.ClassName("audio_row__title_inner"));
         var artistElements = driver.FindElements(By.ClassName("audio_row__performers"));

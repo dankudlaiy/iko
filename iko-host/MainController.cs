@@ -45,8 +45,8 @@ public class MainController : ControllerBase
     {
         var spotifyClient = new SpotifyClient();
 
-        var playlistUrl = await spotifyClient.CreatePlaylist(request.Ids, request.Token);
+        var (playlistUrl, playlistImg) = await spotifyClient.CreatePlaylist(request.Ids, request.Token);
 
-        return Ok(new { url = playlistUrl });
+        return Ok(new { url = playlistUrl, img = playlistImg });
     }
 }

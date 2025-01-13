@@ -20,13 +20,14 @@ export class TrackListComponent implements OnInit {
   playlistLink: string = '';
   isLoading: boolean = false;
   errorMessage: string = '';
-  createdPlaylist: string = '';
+  createdPlaylistLink: string = '';
+  createdPlaylistImgUrl: string = '';
+  createdPlaylistName: string = '';
+
 
   constructor(private route: ActivatedRoute, private mainService: MainService, private router: Router) {}
 
   ngOnInit(): void {
-    debugger;
-
     this.route.queryParams.subscribe(params => {
       this.playlistLink = params['link'];
 
@@ -63,7 +64,7 @@ export class TrackListComponent implements OnInit {
             mergeMap((track) =>
               this.mainService.searchForSpotifyTrack(track.name, track.artist)
             ),
-            delay(1500)
+            delay(200)
           )
         )
       )
@@ -93,21 +94,9 @@ export class TrackListComponent implements OnInit {
     const ids = this.tracks.map(track => track.spotifyId);
     this.mainService.createPlaylist(ids, accessToken).subscribe(
       response => {
-        console.log(response);
-        this.createdPlaylist = response.url;
+        this.createdPlaylistLink = response.url;
+        this.createdPlaylistImgUrl = response.img;
       }
     );
-  }
-
-  goBack() {
-    this.router.navigate(['']);
-  }
-
-  authorizeSpotify() {
-    const clientId = '4fef1cbb12fa458eabfc76ebe6954d1e';
-    const redirectUri = 'http://localhost:4200/callback';
-    const scopes = 'playlist-modify-public playlist-modify-private';
-
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
   }
 }

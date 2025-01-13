@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Router} from "@angular/router";
 import {MainService} from "../../../services/main.service";
+import {ButtonDirective} from "primeng/button";
 @Component({
   selector: 'app-spotify-callback',
   standalone: true,
@@ -23,5 +24,9 @@ export class SpotifyCallbackComponent implements OnInit {
         });
       }
     });
+  }
+
+  goBack() {
+    this.router.navigate(['']);
   }
 }
