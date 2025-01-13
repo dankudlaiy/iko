@@ -55,7 +55,7 @@ public class SpotifyClient
         return response;
     }
 
-    public async Task<(string, string)> CreatePlaylist(IEnumerable<string> ids, string accessToken)
+    public async Task<(string, string?)> CreatePlaylist(IEnumerable<string> ids, string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.spotify.com/v1/me");
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
@@ -89,14 +89,14 @@ public class SpotifyClient
         
         var addTracksUri = new Uri($"https://api.spotify.com/v1/playlists/{playlistId}/tracks");
 
-        var addTracksRequest = new HttpRequestMessage(HttpMethod.Post, addTracksUri);
-        addTracksRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
-
         var trackUris = ids.Select(t => "spotify:track:" + t).ToList();
 
         const int chunkSize = 100;
         for (var i = 0; i < trackUris.Count; i += chunkSize)
         {
+            var addTracksRequest = new HttpRequestMessage(HttpMethod.Post, addTracksUri);
+            addTracksRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
+
             var chunk = trackUris.Skip(i).Take(chunkSize).ToList();
 
             var addTracksData = new 
@@ -117,13 +117,24 @@ public class SpotifyClient
         var getPlaylistRequest = new HttpRequestMessage(HttpMethod.Get, $"https://api.spotify.com/v1/playlists/{playlistId}");
         getPlaylistRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
 
-        response = await _httpClient.SendAsync(getPlaylistRequest);
-        
-        var getPlaylistResponseData = JsonConvert.DeserializeObject<dynamic>(await response.Content.ReadAsStringAsync());
+        await Task.Delay(2000);
 
-        var playlistImgUrl = getPlaylistResponseData!.images[0].url.Value;
+        try
+        {
+            response = await _httpClient.SendAsync(getPlaylistRequest);
 
-        return (playlistUrl, playlistImgUrl);
+            var content = await response.Content.ReadAsStringAsync();
+
+            var getPlaylistResponseData = JsonConvert.DeserializeObject<dynamic>(content);
+
+            var playlistImgUrl = getPlaylistResponseData!.images[0].url.Value;
+
+            return (playlistUrl, playlistImgUrl);
+        }
+        catch
+        {
+            return (playlistUrl, null);
+        }
     }
 
     public async Task<SpotifyTokenResponse?> ObtainAccessToken(string authToken)

@@ -68,12 +68,23 @@ export class TrackListComponent implements OnInit {
           )
         )
       )
-      .subscribe(response => {
-        const index = this.tracks.findIndex(t => t.name === response.name && t.artist === response.artist);
-        if (index !== -1) {
-          this.tracks[index].spotifyId = response.spotifyId;
-          this.tracks[index].imageUrl = response.imageUrl;
-        }
+      .subscribe({
+        next: (response) => {
+          const index = this.tracks.findIndex(
+            (t) => t.name === response.name && t.artist === response.artist
+          );
+          if (index !== -1) {
+            this.tracks[index].spotifyId = response.spotifyId;
+            this.tracks[index].imageUrl = response.imageUrl;
+          }
+        },
+        complete: () => {
+          this.tracks = this.tracks.filter(
+            (track) => track.spotifyId !== undefined && track.spotifyId !== null
+          );
+          console.log('Filtered tracks:', this.tracks);
+        },
+        error: (err) => console.error('Error fetching track details:', err)
       });
   }
 
