@@ -1,0 +1,165 @@
+<!-- Mobile tabs -->
+<div class="mobile-tabs">
+  <button class="mob-tab" [class.active]="mobileTab === 'source'" (click)="mobileTab = 'source'">Add Tracks</button>
+  <button class="mob-tab" [class.active]="mobileTab === 'playlist'" (click)="mobileTab = 'playlist'">Playlist</button>
+</div>
+
+<div class="editor-container">
+  <!-- Source Panel (left) -->
+  <div class="source-panel" [class.mobile-hidden]="mobileTab !== 'source'">
+    <div class="search-section">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Search tracks...</mat-label>
+        <input matInput [(ngModel)]="searchQuery" (input)="onSearchInput()" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <!-- Search results -->
+    @if (searchQuery.trim()) {
+      <div class="source-section">
+        <h4 class="source-section-title">Search Results</h4>
+        @if (searchLoading) {
+          <div class="loading-text">Searching...</div>
+        }
+        @for (platform of searchPlatforms(); track platform) {
+          <div class="search-group">
+            <span class="search-group-label">{{ platform }}</span>
+            @for (track of searchResults[platform]; track track.platformTrackId) {
+              <div class="source-track-row">
+                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="source-track-art" />
+                <div class="source-track-info">
+                  <span class="source-track-name">{{ track.name }}</span>
+                  <span class="source-track-artist">{{ track.artist }}</span>
+                </div>
+                <app-platform-badge [platform]="platform" size="sm"></app-platform-badge>
+                <span class="source-track-dur">{{ formatDuration(track.durationMs) }}</span>
+                @if (isTrackInPlaylist(track.platformTrackId)) {
+                  <span class="in-playlist-dot">●</span>
+                } @else {
+                  <button mat-icon-button class="add-btn" (click)="addTrack(track, platform)">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- My playlists -->
+    <div class="source-section">
+      <div class="source-section-header">
+        <h4 class="source-section-title">My Playlists</h4>
+        <mat-form-field appearance="fill" class="platform-select-field">
+          <mat-select [(ngModel)]="selectedSourcePlatform" (selectionChange)="onSourcePlatformChange()">
+            @for (p of sourcePlatforms; track p.id) {
+              <mat-option [value]="p.id">{{ p.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (loadingSourcePlaylists) {
+        <div class="loading-text">Loading...</div>
+      }
+
+      @for (pl of sourcePlaylists; track pl.id) {
+        <div class="source-playlist-item">
+          <div class="source-playlist-header" (click)="toggleSourcePlaylist(pl.id)">
+            <mat-icon class="expand-icon" [class.expanded]="expandedSourcePlaylist === pl.id">
+              chevron_right
+            </mat-icon>
+            <span class="source-playlist-name">{{ pl.name }}</span>
+            <button mat-icon-button class="play-source-btn" (click)="$event.stopPropagation(); playSourcePlaylist()">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+          </div>
+
+          @if (expandedSourcePlaylist === pl.id) {
+            <div class="source-playlist-tracks">
+              @if (loadingSourceTracks) {
+                <div class="loading-text">Loading tracks...</div>
+              }
+              @for (track of sourcePlaylistTracks; track track.platformTrackId) {
+                <div class="source-track-row">
+                  <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="source-track-art" />
+                  <div class="source-track-info">
+                    <span class="source-track-name">{{ track.name }}</span>
+                    <span class="source-track-artist">{{ track.artist }}</span>
+                  </div>
+                  <span class="source-track-dur">{{ formatDuration(track.durationMs) }}</span>
+                  @if (isTrackInPlaylist(track.platformTrackId)) {
+                    <span class="in-playlist-dot">●</span>
+                  } @else {
+                    <button mat-icon-button class="add-btn" (click)="addTrack(track)">
+                      <mat-icon>add</mat-icon>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Iko Playlist Panel (right) -->
+  <div class="playlist-panel" [class.mobile-hidden]="mobileTab !== 'playlist'">
+    <div class="playlist-header">
+      @if (isEditingName) {
+        <input class="name-input" [(ngModel)]="editName" (blur)="saveName()" (keydown.enter)="saveName()" autofocus />
+      } @else {
+        <h2 class="playlist-title" (click)="startEditName()">
+          {{ playlist?.name }}
+          <mat-icon class="edit-icon">edit</mat-icon>
+        </h2>
+      }
+      <span class="track-count">{{ tracks.length }} tracks</span>
+    </div>
+
+    <div class="playlist-tracks" cdkDropList (cdkDropListDropped)="onDrop($event)">
+      @for (track of tracks; track track.id; let i = $index) {
+        <div class="playlist-track-row" cdkDrag (click)="playTrack(track)">
+          <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+          <span class="track-number">{{ i + 1 }}</span>
+          <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="playlist-track-art" />
+          <div class="playlist-track-info">
+            <span class="playlist-track-name">{{ track.name }}</span>
+            <span class="playlist-track-artist">{{ track.artist }}</span>
+          </div>
+          <app-platform-badge [platform]="platformName(track.platform)" size="sm"></app-platform-badge>
+          <span class="playlist-track-dur">{{ formatDuration(track.durationMs) }}</span>
+          <button mat-icon-button class="remove-btn" (click)="$event.stopPropagation(); removeTrack(track.id)">
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <div class="cdk-drag-placeholder" *cdkDragPlaceholder></div>
+        </div>
+      }
+    </div>
+
+    @if (tracks.length === 0) {
+      <div class="empty-state">
+        <mat-icon>queue_music</mat-icon>
+        <p>No tracks yet. Search or browse your playlists to add tracks.</p>
+      </div>
+    }
+
+    <div class="playlist-footer">
+      <button mat-raised-button color="primary" (click)="playAll()" [disabled]="tracks.length === 0">
+        <mat-icon>play_arrow</mat-icon> Play All
+      </button>
+      <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
+        Export →
+      </button>
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportStub()">Export to Spotify</button>
+        <button mat-menu-item (click)="exportStub()">Export to YouTube</button>
+        <button mat-menu-item (click)="exportStub()">Export to Apple Music</button>
+      </mat-menu>
+    </div>
+  </div>
+</div>

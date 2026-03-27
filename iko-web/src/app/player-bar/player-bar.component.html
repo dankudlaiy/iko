@@ -1,0 +1,46 @@
+@if (track) {
+  <div class="player-bar" [class.loading]="s.isLoading">
+    <div class="player-left">
+      <img [src]="track.imageUrl || 'https://via.placeholder.com/48?text=♪'" [alt]="track.name" class="player-art" />
+      <div class="player-track-info">
+        <span class="player-track-name">{{ track.name }}</span>
+        <span class="player-track-artist">{{ track.artist }}</span>
+      </div>
+      <app-platform-badge [platform]="track.platform" size="sm"></app-platform-badge>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button mat-icon-button class="control-btn" (click)="player.toggleShuffle()"
+                [class.active]="s.isShuffle">
+          <mat-icon>shuffle</mat-icon>
+        </button>
+        <button mat-icon-button class="control-btn" (click)="player.previous()">
+          <mat-icon>skip_previous</mat-icon>
+        </button>
+        <button mat-icon-button class="play-btn" (click)="togglePlay()">
+          <mat-icon>{{ s.isPlaying ? 'pause_circle_filled' : 'play_circle_filled' }}</mat-icon>
+        </button>
+        <button mat-icon-button class="control-btn" (click)="player.next()">
+          <mat-icon>skip_next</mat-icon>
+        </button>
+        <button mat-icon-button class="control-btn" (click)="player.toggleRepeat()"
+                [class.active]="s.repeatMode !== 'none'">
+          <mat-icon>{{ s.repeatMode === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
+        </button>
+      </div>
+      <div class="player-progress">
+        <span class="time">{{ player.formatTime(s.positionMs) }}</span>
+        <input type="range" class="progress-slider" min="0" [max]="s.durationMs || 1"
+               [value]="s.positionMs" (input)="onSeek($event)" />
+        <span class="time">{{ player.formatTime(s.durationMs) }}</span>
+      </div>
+    </div>
+
+    @if (s.isLoading) {
+      <div class="loading-overlay">
+        <span>{{ s.loadingMessage }}</span>
+      </div>
+    }
+  </div>
+}

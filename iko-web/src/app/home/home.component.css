@@ -1,0 +1,213 @@
+.home-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.logo-text {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-top: 0.25rem;
+}
+
+.step-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.platform-grid {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.platform-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 100px;
+  padding: 16px 12px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.platform-card:hover:not(.stub) {
+  border-color: var(--accent);
+}
+
+.platform-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(29, 185, 84, 0.3);
+}
+
+.platform-card.stub {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.platform-icon {
+  font-size: 1.75rem;
+}
+
+.platform-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.coming-soon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--border);
+  color: var(--text-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.url-field {
+  width: 100%;
+}
+
+.convert-btn {
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  align-self: stretch;
+}
+
+.progress-step {
+  align-items: center;
+  padding: 3rem 0;
+}
+
+.status-text {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.create-btn {
+  height: 44px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.track-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.error-text {
+  color: var(--error);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.success-step {
+  align-items: center;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.success-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.playlist-cover {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  object-fit: cover;
+  margin: 1rem 0;
+}
+
+.playlist-link {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.playlist-link:hover {
+  background: var(--accent-hover);
+  color: #000;
+}
+
+.reset-btn {
+  margin-top: 1rem;
+}
+
+@media (min-width: 768px) {
+  .track-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-container {
+    padding: 1rem;
+  }
+
+  .logo-text {
+    font-size: 2.25rem;
+  }
+
+  .platform-card {
+    min-width: 80px;
+    padding: 12px 8px;
+  }
+
+  .platform-icon {
+    font-size: 1.5rem;
+  }
+}

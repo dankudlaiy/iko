@@ -1,22 +1,43 @@
-<nav class="navbar navbar-expand-lg bg-body-tertiary">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="http://localhost:4200/#">iko</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarText">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-<!--                <li class="nav-item">-->
-<!--                    <a class="nav-link active" aria-current="page" href="#">Home</a>-->
-<!--                </li>-->
-<!--                <li class="nav-item">-->
-<!--                    <a class="nav-link" href="#">Features</a>-->
-<!--                </li>-->
-<!--                <li class="nav-item">-->
-<!--                    <a class="nav-link" href="#">Pricing</a>-->
-<!--                </li>-->
-            </ul>
-            <button class="btn btn-primary" type="submit" (click)="authorizeSpotify()">Authorize with Spotify</button>
-        </div>
-    </div>
-</nav>
+<mat-toolbar class="header-toolbar">
+  <a routerLink="/" class="brand">iko</a>
+
+  <span class="spacer"></span>
+
+  <!-- Desktop nav -->
+  <div class="desktop-nav">
+    <a mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">Convert</a>
+
+    @if (isLoggedIn) {
+      <a mat-button routerLink="/library" routerLinkActive="active-link">Library</a>
+      <a mat-button routerLink="/settings" routerLinkActive="active-link">Settings</a>
+      <span class="user-email">{{ user?.email }}</span>
+      <button mat-stroked-button (click)="logout()">Logout</button>
+    } @else {
+      <a mat-button routerLink="/login" routerLinkActive="active-link">Login</a>
+      <a mat-raised-button color="primary" routerLink="/register">Sign Up</a>
+    }
+  </div>
+
+  <!-- Mobile hamburger -->
+  <button mat-icon-button class="mobile-toggle" (click)="toggleMenu()">
+    <mat-icon>{{ mobileMenuOpen ? 'close' : 'menu' }}</mat-icon>
+  </button>
+</mat-toolbar>
+
+<!-- Mobile drawer -->
+@if (mobileMenuOpen) {
+  <div class="mobile-backdrop" (click)="closeMenu()"></div>
+  <div class="mobile-drawer">
+    <a routerLink="/" (click)="closeMenu()" class="drawer-link">Convert</a>
+
+    @if (isLoggedIn) {
+      <a routerLink="/library" (click)="closeMenu()" class="drawer-link">Library</a>
+      <a routerLink="/settings" (click)="closeMenu()" class="drawer-link">Settings</a>
+      <span class="drawer-email">{{ user?.email }}</span>
+      <button mat-stroked-button color="warn" (click)="logout()" class="drawer-btn">Logout</button>
+    } @else {
+      <a routerLink="/login" (click)="closeMenu()" class="drawer-link">Login</a>
+      <a routerLink="/register" (click)="closeMenu()" class="drawer-link accent">Sign Up</a>
+    }
+  </div>
+}

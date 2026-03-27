@@ -1,0 +1,53 @@
+<div class="settings-container">
+  <h2 class="page-title">Settings</h2>
+
+  <div class="settings-grid">
+    <!-- Account Info -->
+    <div class="settings-section">
+      <mat-card class="info-card">
+        <mat-card-header>
+          <mat-card-title>Account</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (user) {
+            <p class="user-email">{{ user.email }}</p>
+          }
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-raised-button color="warn" (click)="logout()">Logout</button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+
+    <!-- Connected Platforms -->
+    <div class="settings-section">
+      <h3 class="section-title">Connected Platforms</h3>
+      <div class="platform-list">
+        @for (p of platforms; track p.id) {
+          <div class="platform-row">
+            <div class="platform-info">
+              <span class="platform-icon">{{ p.icon }}</span>
+              <div class="platform-details">
+                <span class="platform-name">{{ p.name }}</span>
+                @if (isConnected(p.id)) {
+                  <span class="connected-label">Connected {{ getDisplayName(p.id) ? 'as ' + getDisplayName(p.id) : '' }}</span>
+                } @else {
+                  <span class="not-connected-label">Not connected</span>
+                }
+              </div>
+            </div>
+            <div class="platform-actions">
+              @if (p.stub) {
+                <span class="coming-soon-badge">Coming Soon</span>
+              } @else if (isConnected(p.id)) {
+                <button mat-stroked-button color="warn" (click)="disconnect(p.id)">Disconnect</button>
+              } @else {
+                <button mat-stroked-button color="primary" (click)="connect(p)">Connect</button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

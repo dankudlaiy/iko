@@ -1,0 +1,123 @@
+<div class="home-container">
+  <div class="hero">
+    <h1 class="logo-text">iko</h1>
+    <p class="subtitle">Transfer your playlists between music platforms</p>
+  </div>
+
+  <!-- Step 1: Select platforms & URL -->
+  @if (step === 1) {
+    <div class="step-container">
+      <div class="platform-section">
+        <h3 class="section-label">From</h3>
+        <div class="platform-grid">
+          @for (p of platforms; track p.id) {
+            <div
+              class="platform-card"
+              [class.selected]="fromPlatform?.id === p.id"
+              [class.stub]="p.stub"
+              (click)="selectFrom(p)"
+            >
+              <span class="platform-icon">{{ p.icon }}</span>
+              <span class="platform-name">{{ p.name }}</span>
+              @if (p.stub) {
+                <span class="coming-soon">Soon</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="platform-section">
+        <h3 class="section-label">To</h3>
+        <div class="platform-grid">
+          @for (p of platforms; track p.id) {
+            <div
+              class="platform-card"
+              [class.selected]="toPlatform?.id === p.id"
+              [class.stub]="p.stub"
+              (click)="selectTo(p)"
+            >
+              <span class="platform-icon">{{ p.icon }}</span>
+              <span class="platform-name">{{ p.name }}</span>
+              @if (p.stub) {
+                <span class="coming-soon">Soon</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <mat-form-field appearance="fill" class="url-field">
+        <mat-label>Playlist URL</mat-label>
+        <input matInput [(ngModel)]="playlistUrl" placeholder="Paste your playlist link here">
+      </mat-form-field>
+
+      @if (errorMessage) {
+        <p class="error-text">{{ errorMessage }}</p>
+      }
+
+      <button
+        mat-raised-button
+        color="primary"
+        class="convert-btn"
+        [disabled]="!canConvert()"
+        (click)="convert()"
+      >
+        Convert →
+      </button>
+    </div>
+  }
+
+  <!-- Step 2: Progress -->
+  @if (step === 2) {
+    <div class="step-container progress-step">
+      <p class="status-text">{{ statusText }}</p>
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    </div>
+  }
+
+  <!-- Step 3: Results -->
+  @if (step === 3) {
+    <div class="step-container results-step">
+      <div class="results-header">
+        <p class="status-text">{{ statusText }}</p>
+        <button mat-raised-button color="primary" (click)="createPlaylist()" class="create-btn">
+          Create Playlist
+        </button>
+      </div>
+
+      @if (errorMessage) {
+        <p class="error-text">{{ errorMessage }}</p>
+      }
+
+      <div class="track-grid">
+        @for (track of matchedTracks; track track.name + track.artist) {
+          <app-track-card
+            [name]="track.name"
+            [artist]="track.artist"
+            [imageUrl]="track.imageUrl"
+            [matched]="track.matched"
+          ></app-track-card>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Step 4: Success -->
+  @if (step === 4) {
+    <div class="step-container success-step">
+      <h2 class="success-title">Playlist Created!</h2>
+      @if (createdPlaylistImg) {
+        <img [src]="createdPlaylistImg" alt="Playlist cover" class="playlist-cover" />
+      }
+      @if (createdPlaylistUrl) {
+        <a [href]="createdPlaylistUrl" target="_blank" class="playlist-link">
+          Open Playlist ↗
+        </a>
+      }
+      <button mat-raised-button (click)="reset()" class="reset-btn">
+        Convert Another
+      </button>
+    </div>
+  }
+</div>

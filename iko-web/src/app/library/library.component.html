@@ -1,0 +1,137 @@
+<div class="library-container">
+  <!-- Iko Playlists Section -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Your iko Playlists</h2>
+      <button mat-raised-button color="primary" (click)="showNewPlaylistDialog = true">
+        <mat-icon>add</mat-icon> New Playlist
+      </button>
+    </div>
+
+    <div class="playlist-grid">
+      @for (playlist of ikoPlaylists; track playlist.id) {
+        <div class="playlist-card" (click)="openIkoPlaylist(playlist.id)">
+          <div class="playlist-cover">
+            @if (playlist.coverUrl) {
+              <img [src]="playlist.coverUrl" alt="" />
+            } @else {
+              <div class="cover-placeholder">
+                <mat-icon>library_music</mat-icon>
+              </div>
+            }
+            <div class="card-hover-overlay">
+              <mat-icon class="play-overlay-icon">play_arrow</mat-icon>
+            </div>
+          </div>
+          <span class="playlist-name">{{ playlist.name }}</span>
+          <span class="playlist-count">{{ playlist.trackCount }} tracks</span>
+        </div>
+      }
+
+      <div class="playlist-card create-card" (click)="showNewPlaylistDialog = true">
+        <div class="playlist-cover">
+          <div class="cover-placeholder create-placeholder">
+            <mat-icon>add</mat-icon>
+          </div>
+        </div>
+        <span class="playlist-name">Create</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Platform Playlists Section -->
+  <div class="section">
+    <h2>Your Platform Playlists</h2>
+
+    <div class="platform-tabs">
+      @for (tab of platformTabs; track tab.id) {
+        <button class="tab-btn"
+                [class.active]="selectedPlatformTab === tab.id"
+                [class.disabled]="!tab.connected"
+                [matTooltip]="!tab.connected ? 'Connect in Settings' : ''"
+                (click)="selectPlatformTab(tab.id)">
+          <app-platform-badge [platform]="tab.id" size="sm"></app-platform-badge>
+          <span>{{ tab.name }}</span>
+          @if (!tab.connected) {
+            <mat-icon class="lock-icon">lock</mat-icon>
+          }
+        </button>
+      }
+    </div>
+
+    @if (loadingPlatform) {
+      <div class="loading-state">Loading playlists...</div>
+    } @else {
+      <div class="playlist-grid">
+        @for (pl of platformPlaylists; track pl.id) {
+          <div class="playlist-card" (click)="togglePlaylistExpand(pl.id)">
+            <div class="playlist-cover">
+              @if (pl.imageUrl) {
+                <img [src]="pl.imageUrl" alt="" />
+              } @else {
+                <div class="cover-placeholder">
+                  <mat-icon>queue_music</mat-icon>
+                </div>
+              }
+              <div class="card-hover-overlay" (click)="$event.stopPropagation(); playPlatformPlaylist(pl)">
+                <mat-icon class="play-overlay-icon">play_arrow</mat-icon>
+              </div>
+            </div>
+            <span class="playlist-name">{{ pl.name }}</span>
+            <span class="playlist-count">{{ pl.trackCount }} tracks</span>
+          </div>
+        }
+      </div>
+
+      @if (expandedPlaylistId) {
+        <div class="expanded-tracks">
+          @if (loadingTracks) {
+            <div class="loading-state">Loading tracks...</div>
+          } @else {
+            @for (track of expandedPlaylistTracks; track track.platformTrackId) {
+              <div class="track-row">
+                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="track-art" />
+                <div class="track-info">
+                  <span class="track-name">{{ track.name }}</span>
+                  <span class="track-artist">{{ track.artist }}</span>
+                </div>
+                <div class="track-actions">
+                  <button mat-icon-button class="add-btn" [matMenuTriggerFor]="trackMenu">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                  <mat-menu #trackMenu="matMenu">
+                    @for (ip of ikoPlaylists; track ip.id) {
+                      <button mat-menu-item (click)="addToIkoPlaylist(track, ip.id)">
+                        {{ ip.name }}
+                      </button>
+                    }
+                    @if (ikoPlaylists.length === 0) {
+                      <button mat-menu-item disabled>No playlists yet</button>
+                    }
+                  </mat-menu>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- New Playlist Dialog Overlay -->
+@if (showNewPlaylistDialog) {
+  <div class="dialog-backdrop" (click)="showNewPlaylistDialog = false">
+    <div class="dialog-card" (click)="$event.stopPropagation()">
+      <h3>Create New Playlist</h3>
+      <mat-form-field appearance="fill">
+        <mat-label>Playlist name</mat-label>
+        <input matInput [(ngModel)]="newPlaylistName" (keydown.enter)="createNewPlaylist()" autofocus />
+      </mat-form-field>
+      <div class="dialog-actions">
+        <button mat-button (click)="showNewPlaylistDialog = false">Cancel</button>
+        <button mat-raised-button color="primary" (click)="createNewPlaylist()" [disabled]="!newPlaylistName.trim()">Create</button>
+      </div>
+    </div>
+  </div>
+}

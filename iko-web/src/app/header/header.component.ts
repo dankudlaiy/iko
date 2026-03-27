@@ -1,18 +1,44 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { AuthService, UserInfo } from '../services/auth.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [],
+  imports: [
+    CommonModule, RouterLink, RouterLinkActive,
+    MatToolbarModule, MatButtonModule, MatIconModule, MatSidenavModule
+  ],
   templateUrl: './header.component.html',
-  styleUrl: './header.component.css'
+  styleUrls: ['./header.component.css']
 })
 export class HeaderComponent {
-  authorizeSpotify() {
-    const clientId = '4fef1cbb12fa458eabfc76ebe6954d1e';
-    const redirectUri = 'http://localhost:4200/callback';
-    const scopes = 'playlist-modify-public playlist-modify-private';
+  user: UserInfo | null = null;
+  mobileMenuOpen = false;
 
-    window.location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
+  constructor(private authService: AuthService) {
+    this.authService.currentUser$.subscribe(u => this.user = u);
+  }
+
+  get isLoggedIn(): boolean {
+    return this.authService.isLoggedIn();
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.mobileMenuOpen = false;
+  }
+
+  toggleMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  closeMenu(): void {
+    this.mobileMenuOpen = false;
   }
 }

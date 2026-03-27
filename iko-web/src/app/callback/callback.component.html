@@ -1,0 +1,11 @@
+<div class="callback-container">
+  @if (loading) {
+    <mat-spinner diameter="48"></mat-spinner>
+    <p class="status-text">Completing authorization...</p>
+  }
+
+  @if (errorMessage) {
+    <p class="error-text">{{ errorMessage }}</p>
+    <a routerLink="/settings" class="back-link">Back to Settings</a>
+  }
+</div>

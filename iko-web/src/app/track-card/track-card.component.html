@@ -1,0 +1,14 @@
+<div class="track-card">
+  <img
+    [src]="imageUrl || 'https://via.placeholder.com/60x60?text=No+Art'"
+    [alt]="name"
+    class="track-art"
+  />
+  <div class="track-info">
+    <span class="track-name">{{ name }}</span>
+    <span class="track-artist">{{ artist }}</span>
+  </div>
+  <span class="badge" [class.matched]="matched" [class.not-found]="!matched">
+    {{ matched ? 'Matched' : 'Not Found' }}
+  </span>
+</div>
