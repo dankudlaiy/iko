@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { toast } from 'ngx-sonner';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmBadge } from '@spartan-ng/helm/badge';
+import { HlmCardImports } from '@spartan-ng/helm/card';
 import { AuthService, UserInfo } from '../services/auth.service';
 import { ApiService } from '../services/api.service';
 import { PlayerService } from '../services/player.service';
@@ -15,11 +15,9 @@ interface PlatformConfig {
 }
 
 @Component({
-  selector: 'app-settings',
-  standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatSnackBarModule],
-  templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.css']
+    selector: 'app-settings',
+    imports: [...HlmCardImports, HlmButton, HlmBadge],
+    templateUrl: './settings.component.html',
 })
 export class SettingsComponent implements OnInit {
   user: UserInfo | null = null;
@@ -36,8 +34,7 @@ export class SettingsComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private apiService: ApiService,
-    private playerService: PlayerService,
-    private snackBar: MatSnackBar
+    private playerService: PlayerService
   ) {}
 
   ngOnInit(): void {
@@ -75,7 +72,7 @@ export class SettingsComponent implements OnInit {
         if (res.data?.url) {
           window.location.href = res.data.url;
         } else if (res.message) {
-          alert(res.message);
+          toast(res.message);
         }
       }
     });
@@ -92,7 +89,7 @@ export class SettingsComponent implements OnInit {
         this.loadAccounts();
         if (platformName && this.playerService.state.currentPlatform === platformName) {
           this.playerService.pause();
-          this.snackBar.open(`Disconnected ${platformName} — playback stopped`, '', { duration: 5000 });
+          toast(`Disconnected ${platformName} — playback stopped`);
         }
       }
     });

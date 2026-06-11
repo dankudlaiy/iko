@@ -1,103 +1,127 @@
-<div class="home-container">
-  <div class="hero">
-    <h1 class="logo-text">iko</h1>
-    <p class="subtitle">Transfer your playlists between music platforms</p>
+<div class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+  <div class="mb-10 text-center sm:mb-12">
+    <h1
+      class="bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-5xl font-bold leading-none tracking-tight text-transparent sm:text-6xl"
+    >
+      iko
+    </h1>
+    <p class="mt-3 text-base text-muted-foreground sm:text-lg">
+      Transfer your playlists between music platforms
+    </p>
   </div>
 
   <!-- Step 1: Select platforms & URL -->
   @if (step === 1) {
-    <div class="step-container">
-      <div class="platform-section">
-        <h3 class="section-label">From</h3>
-        <div class="platform-grid">
-          @for (p of platforms; track p.id) {
-            <div
-              class="platform-card"
-              [class.selected]="fromPlatform?.id === p.id"
-              [class.stub]="p.stub"
-              (click)="selectFrom(p)"
-            >
-              <span class="platform-icon">{{ p.icon }}</span>
-              <span class="platform-name">{{ p.name }}</span>
-              @if (p.stub) {
-                <span class="coming-soon">Soon</span>
-              }
-            </div>
-          }
+    <div class="flex flex-col gap-6">
+      <div class="grid grid-cols-1 items-start gap-3 sm:grid-cols-[1fr_auto_1fr]">
+        <!-- From -->
+        <div>
+          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From</h3>
+          <div class="grid grid-cols-3 gap-2">
+            @for (p of platforms; track p.id) {
+              <button type="button" [class]="cardClass(fromPlatform?.id === p.id, p.stub)" (click)="selectFrom(p)">
+                <app-platform-badge [platform]="p.id" size="lg" />
+                <span class="text-xs font-medium leading-tight">{{ p.name }}</span>
+                @if (p.stub) {
+                  <span class="absolute right-1 top-1 rounded bg-secondary px-1.5 py-0.5 text-[0.5625rem] font-bold uppercase text-primary">Soon</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="flex items-center justify-center text-primary/60 sm:pt-9">
+          <ng-icon hlm name="lucideArrowRight" class="rotate-90 sm:rotate-0" />
+        </div>
+
+        <!-- To -->
+        <div>
+          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To</h3>
+          <div class="grid grid-cols-3 gap-2">
+            @for (p of platforms; track p.id) {
+              <button type="button" [class]="cardClass(toPlatform?.id === p.id, p.stub)" (click)="selectTo(p)">
+                <app-platform-badge [platform]="p.id" size="lg" />
+                <span class="text-xs font-medium leading-tight">{{ p.name }}</span>
+                @if (p.stub) {
+                  <span class="absolute right-1 top-1 rounded bg-secondary px-1.5 py-0.5 text-[0.5625rem] font-bold uppercase text-primary">Soon</span>
+                }
+              </button>
+            }
+          </div>
         </div>
       </div>
 
-      <div class="platform-section">
-        <h3 class="section-label">To</h3>
-        <div class="platform-grid">
-          @for (p of platforms; track p.id) {
-            <div
-              class="platform-card"
-              [class.selected]="toPlatform?.id === p.id"
-              [class.stub]="p.stub"
-              (click)="selectTo(p)"
-            >
-              <span class="platform-icon">{{ p.icon }}</span>
-              <span class="platform-name">{{ p.name }}</span>
-              @if (p.stub) {
-                <span class="coming-soon">Soon</span>
-              }
-            </div>
-          }
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="playlistUrl">Playlist URL</label>
+        <div class="relative">
+          <input
+            hlmInput
+            id="playlistUrl"
+            [(ngModel)]="playlistUrl"
+            placeholder="Paste your playlist link here"
+            class="w-full pr-10"
+          />
+          <ng-icon
+            hlm
+            name="lucideLink"
+            class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
         </div>
       </div>
-
-      <mat-form-field appearance="fill" class="url-field">
-        <mat-label>Playlist URL</mat-label>
-        <input matInput [(ngModel)]="playlistUrl" placeholder="Paste your playlist link here">
-      </mat-form-field>
 
       @if (errorMessage) {
-        <p class="error-text">{{ errorMessage }}</p>
+        <p class="text-center text-sm text-destructive">{{ errorMessage }}</p>
       }
 
-      <button
-        mat-raised-button
-        color="primary"
-        class="convert-btn"
-        [disabled]="!canConvert()"
-        (click)="convert()"
-      >
-        Convert →
+      <button hlmBtn size="lg" class="w-full" [disabled]="!canConvert()" (click)="convert()">
+        Convert
+        <ng-icon hlm name="lucideArrowRight" />
       </button>
     </div>
   }
 
   <!-- Step 2: Progress -->
   @if (step === 2) {
-    <div class="step-container progress-step">
-      <p class="status-text">{{ statusText }}</p>
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <div class="flex flex-col items-center gap-6 py-8">
+      <div class="flex items-center gap-8 rounded-2xl border bg-secondary px-10 py-8">
+        <div class="flex flex-col items-center gap-2.5">
+          <app-platform-badge [platform]="fromPlatform!.id" size="xl" />
+          <span class="text-sm font-medium text-muted-foreground">{{ fromPlatform?.name }}</span>
+        </div>
+        <ng-icon hlm name="lucideArrowRight" class="text-2xl text-primary motion-safe:animate-pulse" />
+        <div class="flex flex-col items-center gap-2.5">
+          <app-platform-badge [platform]="toPlatform!.id" size="xl" />
+          <span class="text-sm font-medium text-muted-foreground">{{ toPlatform?.name }}</span>
+        </div>
+      </div>
+      <p class="text-sm text-muted-foreground">{{ statusText }}</p>
+      <hlm-progress class="max-w-sm" [value]="null">
+        <hlm-progress-indicator />
+      </hlm-progress>
     </div>
   }
 
   <!-- Step 3: Results -->
   @if (step === 3) {
-    <div class="step-container results-step">
-      <div class="results-header">
-        <p class="status-text">{{ statusText }}</p>
-        <button mat-raised-button color="primary" (click)="createPlaylist()" class="create-btn">
-          Create Playlist
-        </button>
+    <div class="flex flex-col gap-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <p class="text-sm font-medium text-muted-foreground">{{ statusText }}</p>
+        <button hlmBtn (click)="createPlaylist()">Create Playlist</button>
       </div>
 
       @if (errorMessage) {
-        <p class="error-text">{{ errorMessage }}</p>
+        <p class="text-center text-sm text-destructive">{{ errorMessage }}</p>
       }
 
-      <div class="track-grid">
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
         @for (track of matchedTracks; track track.name + track.artist) {
           <app-track-card
             [name]="track.name"
             [artist]="track.artist"
             [imageUrl]="track.imageUrl"
             [matched]="track.matched"
-          ></app-track-card>
+          />
         }
       </div>
     </div>
@@ -105,19 +129,24 @@
 
   <!-- Step 4: Success -->
   @if (step === 4) {
-    <div class="step-container success-step">
-      <h2 class="success-title">Playlist Created!</h2>
+    <div class="flex flex-col items-center gap-4 py-8 text-center">
+      <h2 class="bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-3xl font-bold text-transparent">
+        Playlist Created!
+      </h2>
       @if (createdPlaylistImg) {
-        <img [src]="createdPlaylistImg" alt="Playlist cover" class="playlist-cover" />
+        <img
+          [src]="createdPlaylistImg"
+          alt="Playlist cover"
+          class="my-4 size-50 rounded-2xl object-cover shadow-xl shadow-primary/20"
+        />
       }
       @if (createdPlaylistUrl) {
-        <a [href]="createdPlaylistUrl" target="_blank" class="playlist-link">
-          Open Playlist ↗
+        <a hlmBtn size="lg" [href]="createdPlaylistUrl" target="_blank" rel="noopener">
+          Open Playlist
+          <ng-icon hlm name="lucideExternalLink" />
         </a>
       }
-      <button mat-raised-button (click)="reset()" class="reset-btn">
-        Convert Another
-      </button>
+      <button hlmBtn variant="outline" class="mt-2" (click)="reset()">Convert Another</button>
     </div>
   }
 </div>

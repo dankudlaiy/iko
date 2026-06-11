@@ -13,10 +13,32 @@ namespace iko_host.Controllers;
 public class IkoPlaylistsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IWebHostEnvironment _env;
 
-    public IkoPlaylistsController(AppDbContext db)
+    private static readonly Dictionary<string, string> AllowedImageTypes = new()
+    {
+        ["image/png"] = ".png",
+        ["image/jpeg"] = ".jpg",
+        ["image/webp"] = ".webp",
+    };
+    private const long MaxCoverBytes = 5 * 1024 * 1024;
+
+    public IkoPlaylistsController(AppDbContext db, IWebHostEnvironment env)
     {
         _db = db;
+        _env = env;
+    }
+
+    private string CoversDir => Path.Combine(
+        _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot"), "uploads", "covers");
+
+    private void DeleteExistingCovers(Guid playlistId)
+    {
+        if (!Directory.Exists(CoversDir)) return;
+        foreach (var existing in Directory.EnumerateFiles(CoversDir, $"{playlistId}-*"))
+        {
+            try { System.IO.File.Delete(existing); } catch { /* best effort */ }
+        }
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -34,6 +56,12 @@ public class IkoPlaylistsController : ControllerBase
                 p.Name,
                 p.CoverUrl,
                 TrackCount = p.Tracks.Count,
+                CoverImages = p.Tracks
+                    .Where(t => t.ImageUrl != null)
+                    .OrderBy(t => t.Order)
+                    .Select(t => t.ImageUrl)
+                    .Take(4)
+                    .ToList(),
                 p.CreatedAt,
                 p.UpdatedAt
             })
@@ -217,6 +245,54 @@ public class IkoPlaylistsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { data = true, error = (string?)null });
+    }
+
+    [HttpPost("{id:guid}/cover")]
+    public async Task<IActionResult> UploadCover(Guid id, IFormFile? file)
+    {
+        var userId = GetUserId();
+        var playlist = await _db.IkoPlaylists.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (playlist == null)
+            return NotFound(new { data = (object?)null, error = "Playlist not found" });
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new { data = (object?)null, error = "No file uploaded" });
+        if (file.Length > MaxCoverBytes)
+            return BadRequest(new { data = (object?)null, error = "Image must be 5 MB or smaller" });
+        if (!AllowedImageTypes.TryGetValue(file.ContentType, out var ext))
+            return BadRequest(new { data = (object?)null, error = "Only PNG, JPEG or WebP images are allowed" });
+
+        Directory.CreateDirectory(CoversDir);
+        DeleteExistingCovers(id);
+
+        var fileName = $"{id}-{DateTime.UtcNow.Ticks}{ext}";
+        var fullPath = Path.Combine(CoversDir, fileName);
+        await using (var stream = System.IO.File.Create(fullPath))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        playlist.CoverUrl = $"/uploads/covers/{fileName}";
+        playlist.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { data = new { playlist.Id, playlist.Name, playlist.CoverUrl }, error = (string?)null });
+    }
+
+    [HttpDelete("{id:guid}/cover")]
+    public async Task<IActionResult> RemoveCover(Guid id)
+    {
+        var userId = GetUserId();
+        var playlist = await _db.IkoPlaylists.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (playlist == null)
+            return NotFound(new { data = (object?)null, error = "Playlist not found" });
+
+        DeleteExistingCovers(id);
+        playlist.CoverUrl = null;
+        playlist.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { data = new { playlist.Id, playlist.Name, playlist.CoverUrl }, error = (string?)null });
     }
 }
 

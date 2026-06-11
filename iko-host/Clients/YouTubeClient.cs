@@ -140,6 +140,12 @@ public class YouTubeClient
             pageToken = obj.nextPageToken?.ToString();
         } while (pageToken != null);
 
+        var videoIds = tracks.Where(t => !string.IsNullOrEmpty(t.YouTubeVideoId)).Select(t => t.YouTubeVideoId!);
+        var durations = await FetchDurations(videoIds, accessToken);
+        foreach (var track in tracks.Where(t => t.YouTubeVideoId != null))
+            if (durations.TryGetValue(track.YouTubeVideoId!, out var ms))
+                track.DurationMs = ms;
+
         return tracks;
     }
 
@@ -293,29 +299,66 @@ public class YouTubeClient
         var content = await response.Content.ReadAsStringAsync();
         dynamic? obj = JsonConvert.DeserializeObject(content);
 
-        var tracks = new List<object>();
-        if (obj?.items == null) return tracks;
+        if (obj?.items == null) return new List<object>();
 
+        var raw = new List<(string videoId, string name, string artist, string? imageUrl)>();
         foreach (var item in obj.items)
         {
-            string? imageUrl = null;
-            if (item.snippet?.thumbnails?.medium != null)
-                imageUrl = item.snippet.thumbnails.medium.url.ToString();
-
+            string? imageUrl = item.snippet?.thumbnails?.medium != null
+                ? item.snippet.thumbnails.medium.url.ToString()
+                : null;
             string videoId = item.contentDetails?.videoId?.ToString()
                              ?? item.snippet?.resourceId?.videoId?.ToString() ?? "";
-
-            tracks.Add(new
-            {
-                platformTrackId = videoId,
-                name = item.snippet?.title?.ToString() ?? "",
-                artist = item.snippet?.videoOwnerChannelTitle?.ToString() ?? "",
-                imageUrl,
-                durationMs = 0,
-                platform = "YouTube"
-            });
+            raw.Add((videoId,
+                item.snippet?.title?.ToString() ?? "",
+                item.snippet?.videoOwnerChannelTitle?.ToString() ?? "",
+                imageUrl));
         }
 
-        return tracks;
+        var durations = await FetchDurations(raw.Select(r => r.videoId), accessToken);
+
+        return raw.Select(r => (object)new
+        {
+            platformTrackId = r.videoId,
+            name = r.name,
+            artist = r.artist,
+            imageUrl = r.imageUrl,
+            durationMs = durations.GetValueOrDefault(r.videoId, 0),
+            platform = "YouTube"
+        }).ToList();
+    }
+
+    private async Task<Dictionary<string, int>> FetchDurations(IEnumerable<string> videoIds, string accessToken)
+    {
+        var result = new Dictionary<string, int>();
+        var ids = videoIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        if (ids.Count == 0) return result;
+
+        for (int i = 0; i < ids.Count; i += 50)
+        {
+            var batch = string.Join(",", ids.Skip(i).Take(50));
+            try
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id={batch}");
+                req.Headers.Add("Authorization", $"Bearer {accessToken}");
+
+                var res = await _httpClient.SendAsync(req);
+                dynamic? data = JsonConvert.DeserializeObject(await res.Content.ReadAsStringAsync());
+
+                if (data?.items != null)
+                    foreach (var item in data.items)
+                    {
+                        string id = item.id?.ToString() ?? "";
+                        string iso = item.contentDetails?.duration?.ToString() ?? "";
+                        if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(iso))
+                            try { result[id] = (int)System.Xml.XmlConvert.ToTimeSpan(iso).TotalMilliseconds; }
+                            catch { }
+                    }
+            }
+            catch { }
+        }
+
+        return result;
     }
 }

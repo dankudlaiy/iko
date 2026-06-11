@@ -1,100 +1,60 @@
-<!-- Mobile tabs -->
-<div class="mobile-tabs">
-  <button class="mob-tab" [class.active]="mobileTab === 'source'" (click)="mobileTab = 'source'">Add Tracks</button>
-  <button class="mob-tab" [class.active]="mobileTab === 'playlist'" (click)="mobileTab = 'playlist'">Playlist</button>
-</div>
+<div class="mx-auto max-w-7xl px-4 py-6">
+  <!-- Mobile tabs -->
+  <div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border bg-muted p-1 lg:hidden">
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+      [class.bg-background]="mobileTab === 'source'"
+      [class.shadow-sm]="mobileTab === 'source'"
+      [class.text-muted-foreground]="mobileTab !== 'source'"
+      (click)="mobileTab = 'source'"
+    >
+      Add Tracks
+    </button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+      [class.bg-background]="mobileTab === 'playlist'"
+      [class.shadow-sm]="mobileTab === 'playlist'"
+      [class.text-muted-foreground]="mobileTab !== 'playlist'"
+      (click)="mobileTab = 'playlist'"
+    >
+      Playlist
+    </button>
+  </div>
 
-<div class="editor-container">
-  <!-- Source Panel (left) -->
-  <div class="source-panel" [class.mobile-hidden]="mobileTab !== 'source'">
-    <div class="search-section">
-      <mat-form-field appearance="fill" class="search-field">
-        <mat-label>Search tracks...</mat-label>
-        <input matInput [(ngModel)]="searchQuery" (input)="onSearchInput()" />
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-    </div>
-
-    <!-- Search results -->
-    @if (searchQuery.trim()) {
-      <div class="source-section">
-        <h4 class="source-section-title">Search Results</h4>
-        @if (searchLoading) {
-          <div class="loading-text">Searching...</div>
-        }
-        @for (platform of searchPlatforms(); track platform) {
-          <div class="search-group">
-            <span class="search-group-label">{{ platform }}</span>
-            @for (track of searchResults[platform]; track track.platformTrackId) {
-              <div class="source-track-row">
-                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="source-track-art" />
-                <div class="source-track-info">
-                  <span class="source-track-name">{{ track.name }}</span>
-                  <span class="source-track-artist">{{ track.artist }}</span>
-                </div>
-                <app-platform-badge [platform]="platform" size="sm"></app-platform-badge>
-                <span class="source-track-dur">{{ formatDuration(track.durationMs) }}</span>
-                @if (isTrackInPlaylist(track.platformTrackId)) {
-                  <span class="in-playlist-dot">●</span>
-                } @else {
-                  <button mat-icon-button class="add-btn" (click)="addTrack(track, platform)">
-                    <mat-icon>add</mat-icon>
-                  </button>
-                }
-              </div>
-            }
-          </div>
-        }
-      </div>
-    }
-
-    <!-- My playlists -->
-    <div class="source-section">
-      <div class="source-section-header">
-        <h4 class="source-section-title">My Playlists</h4>
-        <mat-form-field appearance="fill" class="platform-select-field">
-          <mat-select [(ngModel)]="selectedSourcePlatform" (selectionChange)="onSourcePlatformChange()">
-            @for (p of sourcePlatforms; track p.id) {
-              <mat-option [value]="p.id">{{ p.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_3fr]">
+    <!-- Source Panel -->
+    <div class="lg:block" [class.hidden]="mobileTab !== 'source'">
+      <div class="relative mb-4">
+        <ng-icon hlm name="lucideSearch" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input hlmInput [(ngModel)]="searchQuery" (input)="onSearchInput()" placeholder="Search tracks..." class="w-full pl-10" />
       </div>
 
-      @if (loadingSourcePlaylists) {
-        <div class="loading-text">Loading...</div>
-      }
-
-      @for (pl of sourcePlaylists; track pl.id) {
-        <div class="source-playlist-item">
-          <div class="source-playlist-header" (click)="toggleSourcePlaylist(pl.id)">
-            <mat-icon class="expand-icon" [class.expanded]="expandedSourcePlaylist === pl.id">
-              chevron_right
-            </mat-icon>
-            <span class="source-playlist-name">{{ pl.name }}</span>
-            <button mat-icon-button class="play-source-btn" (click)="$event.stopPropagation(); playSourcePlaylist()">
-              <mat-icon>play_arrow</mat-icon>
-            </button>
-          </div>
-
-          @if (expandedSourcePlaylist === pl.id) {
-            <div class="source-playlist-tracks">
-              @if (loadingSourceTracks) {
-                <div class="loading-text">Loading tracks...</div>
-              }
-              @for (track of sourcePlaylistTracks; track track.platformTrackId) {
-                <div class="source-track-row">
-                  <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="source-track-art" />
-                  <div class="source-track-info">
-                    <span class="source-track-name">{{ track.name }}</span>
-                    <span class="source-track-artist">{{ track.artist }}</span>
+      <!-- Search results -->
+      @if (searchQuery.trim()) {
+        <div class="mb-6">
+          <h4 class="mb-2 text-sm font-semibold text-muted-foreground">Search Results</h4>
+          @if (searchLoading) {
+            <p class="px-1 py-2 text-sm text-muted-foreground">Searching...</p>
+          }
+          @for (platform of searchPlatforms(); track platform) {
+            <div class="mb-3">
+              <span class="mb-1 block px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ platform }}</span>
+              @for (track of searchResults[platform]; track track.platformTrackId) {
+                <div class="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
+                  <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
+                  <div class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate text-sm font-medium">{{ track.name }}</span>
+                    <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
                   </div>
-                  <span class="source-track-dur">{{ formatDuration(track.durationMs) }}</span>
+                  <app-platform-badge [platform]="platform" size="sm" />
+                  <span class="text-xs text-muted-foreground">{{ formatDuration(track.durationMs) }}</span>
                   @if (isTrackInPlaylist(track.platformTrackId)) {
-                    <span class="in-playlist-dot">●</span>
+                    <ng-icon hlm name="lucideCheck" class="text-primary" />
                   } @else {
-                    <button mat-icon-button class="add-btn" (click)="addTrack(track)">
-                      <mat-icon>add</mat-icon>
+                    <button hlmBtn variant="ghost" size="icon" aria-label="Add track" (click)="addTrack(track, platform)">
+                      <ng-icon hlm name="lucidePlus" />
                     </button>
                   }
                 </div>
@@ -103,63 +63,155 @@
           }
         </div>
       }
-    </div>
-  </div>
 
-  <!-- Iko Playlist Panel (right) -->
-  <div class="playlist-panel" [class.mobile-hidden]="mobileTab !== 'playlist'">
-    <div class="playlist-header">
-      @if (isEditingName) {
-        <input class="name-input" [(ngModel)]="editName" (blur)="saveName()" (keydown.enter)="saveName()" autofocus />
-      } @else {
-        <h2 class="playlist-title" (click)="startEditName()">
-          {{ playlist?.name }}
-          <mat-icon class="edit-icon">edit</mat-icon>
-        </h2>
-      }
-      <span class="track-count">{{ tracks.length }} tracks</span>
-    </div>
+      <!-- My playlists -->
+      <div>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h4 class="text-sm font-semibold text-muted-foreground">My Playlists</h4>
+          <select
+            [(ngModel)]="selectedSourcePlatform"
+            (change)="onSourcePlatformChange()"
+            class="h-9 rounded-md border border-input bg-background px-2.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            @for (p of sourcePlatforms; track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
 
-    <div class="playlist-tracks" cdkDropList (cdkDropListDropped)="onDrop($event)">
-      @for (track of tracks; track track.id; let i = $index) {
-        <div class="playlist-track-row" cdkDrag (click)="playTrack(track)">
-          <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
-          <span class="track-number">{{ i + 1 }}</span>
-          <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="playlist-track-art" />
-          <div class="playlist-track-info">
-            <span class="playlist-track-name">{{ track.name }}</span>
-            <span class="playlist-track-artist">{{ track.artist }}</span>
+        @if (loadingSourcePlaylists) {
+          @for (i of [0,1,2,3,4]; track i) {
+            <div class="flex items-center gap-3 p-2">
+              <div hlmSkeleton class="size-10 rounded"></div>
+              <div class="flex flex-1 flex-col gap-1.5">
+                <div hlmSkeleton class="h-3 w-2/3"></div>
+                <div hlmSkeleton class="h-2.5 w-2/5"></div>
+              </div>
+            </div>
+          }
+        }
+
+        @for (pl of sourcePlaylists; track pl.id) {
+          <div class="border-b border-border last:border-0">
+            <div class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent" (click)="toggleSourcePlaylist(pl.id)">
+              <ng-icon
+                hlm
+                name="lucideChevronRight"
+                class="text-muted-foreground transition-transform"
+                [class.rotate-90]="expandedSourcePlaylist === pl.id"
+              />
+              <span class="flex-1 truncate text-sm font-medium">{{ pl.name }}</span>
+              <button hlmBtn variant="ghost" size="icon" aria-label="Play playlist" (click)="$event.stopPropagation(); playSourcePlaylist()">
+                <ng-icon hlm name="lucidePlay" />
+              </button>
+            </div>
+
+            @if (expandedSourcePlaylist === pl.id) {
+              <div class="pb-2 pl-6">
+                @if (loadingSourceTracks) {
+                  <p class="px-1 py-2 text-sm text-muted-foreground">Loading tracks...</p>
+                }
+                @for (track of sourcePlaylistTracks; track track.platformTrackId) {
+                  <div class="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
+                    <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
+                    <div class="flex min-w-0 flex-1 flex-col">
+                      <span class="truncate text-sm font-medium">{{ track.name }}</span>
+                      <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
+                    </div>
+                    <span class="text-xs text-muted-foreground">{{ formatDuration(track.durationMs) }}</span>
+                    @if (isTrackInPlaylist(track.platformTrackId)) {
+                      <ng-icon hlm name="lucideCheck" class="text-primary" />
+                    } @else {
+                      <button hlmBtn variant="ghost" size="icon" aria-label="Add track" (click)="addTrack(track)">
+                        <ng-icon hlm name="lucidePlus" />
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
           </div>
-          <app-platform-badge [platform]="platformName(track.platform)" size="sm"></app-platform-badge>
-          <span class="playlist-track-dur">{{ formatDuration(track.durationMs) }}</span>
-          <button mat-icon-button class="remove-btn" (click)="$event.stopPropagation(); removeTrack(track.id)">
-            <mat-icon>close</mat-icon>
-          </button>
+        }
+      </div>
+    </div>
 
-          <div class="cdk-drag-placeholder" *cdkDragPlaceholder></div>
+    <!-- Iko Playlist Panel -->
+    <div class="lg:block" [class.hidden]="mobileTab !== 'playlist'">
+      <div class="mb-4 flex items-center gap-4">
+        <!-- Cover with change / remove -->
+        <div class="group/cover relative size-18 shrink-0 overflow-hidden rounded-lg bg-muted">
+          <app-playlist-cover [coverUrl]="playlist?.coverUrl" [images]="trackImages" class="block size-full" />
+          <button
+            type="button"
+            class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 transition-opacity group-hover/cover:opacity-100"
+            (click)="coverInput.click()"
+            aria-label="Change cover"
+          >
+            <ng-icon hlm name="lucideCamera" />
+          </button>
+          <input #coverInput type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onCoverSelected($event)" />
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col gap-1">
+          @if (isEditingName) {
+            <input hlmInput [(ngModel)]="editName" (blur)="saveName()" (keydown.enter)="saveName()" class="max-w-xs text-lg font-bold" />
+          } @else {
+            <h2 class="group flex cursor-pointer items-center gap-2 text-2xl font-bold tracking-tight" (click)="startEditName()">
+              {{ playlist?.name }}
+              <ng-icon hlm name="lucidePencil" class="text-base text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </h2>
+          }
+          <div class="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>{{ tracks.length }} tracks</span>
+            @if (playlist?.coverUrl) {
+              <button type="button" class="text-xs hover:text-destructive" (click)="removeCover()">Remove cover</button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1" cdkDropList (cdkDropListDropped)="onDrop($event)">
+        @for (track of tracks; track track.id; let i = $index) {
+          <div class="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent" cdkDrag (click)="playTrack(track)">
+            <ng-icon hlm name="lucideGripVertical" cdkDragHandle class="cursor-grab text-muted-foreground" />
+            <span class="w-5 shrink-0 text-center text-xs text-muted-foreground">{{ i + 1 }}</span>
+            <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
+            <div class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate text-sm font-medium">{{ track.name }}</span>
+              <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
+            </div>
+            <app-platform-badge [platform]="platformName(track.platform)" size="sm" />
+            <span class="hidden text-xs text-muted-foreground sm:block">{{ formatDuration(track.durationMs) }}</span>
+            <button hlmBtn variant="ghost" size="icon" aria-label="Remove track" (click)="$event.stopPropagation(); removeTrack(track.id)">
+              <ng-icon hlm name="lucideX" />
+            </button>
+
+            <div class="h-14 w-full rounded-md border-2 border-dashed border-primary/40 bg-primary/5" *cdkDragPlaceholder></div>
+          </div>
+        }
+      </div>
+
+      @if (tracks.length === 0) {
+        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center text-muted-foreground">
+          <ng-icon hlm name="lucideListMusic" class="text-4xl" />
+          <p class="max-w-xs text-sm">No tracks yet. Search or browse your playlists to add tracks.</p>
         </div>
       }
-    </div>
 
-    @if (tracks.length === 0) {
-      <div class="empty-state">
-        <mat-icon>queue_music</mat-icon>
-        <p>No tracks yet. Search or browse your playlists to add tracks.</p>
+      <div class="mt-4 flex items-center gap-2">
+        <button hlmBtn (click)="playAll()" [disabled]="tracks.length === 0">
+          <ng-icon hlm name="lucidePlay" />
+          Play All
+        </button>
+        <button hlmBtn variant="outline" [hlmDropdownMenuTrigger]="exportMenu">Export</button>
+        <ng-template #exportMenu>
+          <div hlmDropdownMenu class="w-48">
+            <button hlmDropdownMenuItem (click)="exportStub()">Export to Spotify</button>
+            <button hlmDropdownMenuItem (click)="exportStub()">Export to YouTube</button>
+            <button hlmDropdownMenuItem (click)="exportStub()">Export to Apple Music</button>
+          </div>
+        </ng-template>
       </div>
-    }
-
-    <div class="playlist-footer">
-      <button mat-raised-button color="primary" (click)="playAll()" [disabled]="tracks.length === 0">
-        <mat-icon>play_arrow</mat-icon> Play All
-      </button>
-      <button mat-stroked-button [matMenuTriggerFor]="exportMenu">
-        Export →
-      </button>
-      <mat-menu #exportMenu="matMenu">
-        <button mat-menu-item (click)="exportStub()">Export to Spotify</button>
-        <button mat-menu-item (click)="exportStub()">Export to YouTube</button>
-        <button mat-menu-item (click)="exportStub()">Export to Apple Music</button>
-      </mat-menu>
     </div>
   </div>
 </div>

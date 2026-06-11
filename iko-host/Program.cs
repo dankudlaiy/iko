@@ -9,6 +9,10 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Ensure the web root + upload dir exist BEFORE the host builds its static-file
+// provider, otherwise UseStaticFiles() binds to a null provider and 404s.
+Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "covers"));
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(
@@ -61,6 +65,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 }
+
+app.UseStaticFiles();
 
 app.UseRouting();
 app.UseCors();

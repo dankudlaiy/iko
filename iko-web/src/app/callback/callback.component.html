@@ -1,11 +1,11 @@
-<div class="callback-container">
+<div class="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-6 p-4 text-center">
   @if (loading) {
-    <mat-spinner diameter="48"></mat-spinner>
-    <p class="status-text">Completing authorization...</p>
+    <hlm-spinner class="text-primary" style="font-size: 3rem"></hlm-spinner>
+    <p class="text-base text-muted-foreground">Completing authorization...</p>
   }
 
   @if (errorMessage) {
-    <p class="error-text">{{ errorMessage }}</p>
-    <a routerLink="/settings" class="back-link">Back to Settings</a>
+    <p class="text-base text-destructive">{{ errorMessage }}</p>
+    <a routerLink="/settings" class="text-sm font-medium text-primary hover:underline">Back to Settings</a>
   }
 </div>

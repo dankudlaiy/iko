@@ -1,30 +1,35 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatMenuModule } from '@angular/material/menu';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideSearch, lucideChevronRight, lucidePlay, lucidePencil,
+  lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera
+} from '@ng-icons/lucide';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { toast } from 'ngx-sonner';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmIcon } from '@spartan-ng/helm/icon';
+import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { ApiService } from '../services/api.service';
 import { PlayerService, IkoTrack } from '../services/player.service';
 import { PlatformBadgeComponent } from '../platform-badge/platform-badge.component';
+import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.component';
 
 @Component({
-  selector: 'app-playlist-editor',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, DragDropModule,
-    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatSnackBarModule, MatMenuModule, PlatformBadgeComponent
-  ],
-  templateUrl: './playlist-editor.component.html',
-  styleUrls: ['./playlist-editor.component.css']
+    selector: 'app-playlist-editor',
+    imports: [
+        FormsModule, DragDropModule, NgIcon, HlmIcon, HlmButton, HlmInput, HlmSkeleton,
+        ...HlmDropdownMenuImports, PlatformBadgeComponent, PlaylistCoverComponent
+    ],
+    viewProviders: [provideIcons({
+      lucideSearch, lucideChevronRight, lucidePlay, lucidePencil,
+      lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera
+    })],
+    templateUrl: './playlist-editor.component.html',
 })
 export class PlaylistEditorComponent implements OnInit {
   playlistId = '';
@@ -55,7 +60,6 @@ export class PlaylistEditorComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private api: ApiService,
-    private snackBar: MatSnackBar,
     public player: PlayerService
   ) {
     this.searchSubject.pipe(
@@ -97,6 +101,34 @@ export class PlaylistEditorComponent implements OnInit {
         next: () => { if (this.playlist) this.playlist.name = this.editName.trim(); }
       });
     }
+  }
+
+  get trackImages(): string[] {
+    return this.tracks.map(t => t.imageUrl).filter((u: string | null): u is string => !!u);
+  }
+
+  onCoverSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.api.uploadPlaylistCover(this.playlistId, file).subscribe({
+      next: res => {
+        if (this.playlist) this.playlist.coverUrl = res.data?.coverUrl ?? null;
+        toast('Cover updated');
+      },
+      error: err => toast(err.error?.error || 'Failed to upload cover')
+    });
+    input.value = '';
+  }
+
+  removeCover(): void {
+    this.api.removePlaylistCover(this.playlistId).subscribe({
+      next: () => {
+        if (this.playlist) this.playlist.coverUrl = null;
+        toast('Cover removed');
+      },
+      error: () => toast('Failed to remove cover')
+    });
   }
 
   onSearchInput(): void {
@@ -173,9 +205,9 @@ export class PlaylistEditorComponent implements OnInit {
     this.api.addTrackToPlaylist(this.playlistId, body).subscribe({
       next: res => {
         this.tracks.push(res.data);
-        this.snackBar.open('Track added', '', { duration: 2000 });
+        toast('Track added');
       },
-      error: err => this.snackBar.open(err.error?.error || 'Failed', '', { duration: 3000 })
+      error: err => toast(err.error?.error || 'Failed')
     });
   }
 
@@ -223,7 +255,7 @@ export class PlaylistEditorComponent implements OnInit {
   }
 
   exportStub(): void {
-    this.snackBar.open('Export coming soon', '', { duration: 3000 });
+    toast('Export coming soon');
   }
 
   formatDuration(ms: number): string {

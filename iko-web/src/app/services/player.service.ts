@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { toast } from 'ngx-sonner';
 import { ApiService } from './api.service';
 
 export interface IkoTrack {
@@ -22,6 +22,8 @@ export interface PlayerState {
   repeatMode: 'none' | 'one' | 'all';
   isLoading: boolean;
   loadingMessage: string;
+  volume: number;
+  isMuted: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -36,7 +38,9 @@ export class PlayerService {
     isShuffle: false,
     repeatMode: 'none',
     isLoading: false,
-    loadingMessage: ''
+    loadingMessage: '',
+    volume: 1,
+    isMuted: false
   };
 
   private spotifyPlayer: any = null;
@@ -44,8 +48,70 @@ export class PlayerService {
   private ytPlayer: any = null;
   private musicKitInstance: any = null;
   private positionInterval: any = null;
+  private _prewarming = false;
 
-  constructor(private snackBar: MatSnackBar, private api: ApiService) {}
+  constructor(private api: ApiService) {
+    const storedVolume = parseFloat(localStorage.getItem('iko_volume') ?? '1');
+    if (!isNaN(storedVolume)) this.state.volume = Math.min(1, Math.max(0, storedVolume));
+    this.state.isMuted = localStorage.getItem('iko_muted') === 'true';
+    this.prewarm();
+  }
+
+  /**
+   * Eagerly create the Spotify player so that activateElement() can run within
+   * the very first user gesture (required to unlock audio on mobile browsers).
+   * Best-effort: silently no-ops if logged out / Spotify not connected.
+   */
+  async prewarm(): Promise<void> {
+    if (this.spotifyPlayer || this._prewarming) return;
+    if (!localStorage.getItem('iko_token')) return;
+    this._prewarming = true;
+    try {
+      await this.initSpotifySdk();
+    } catch {
+      /* not connected / no Premium — real error surfaces on actual play */
+    } finally {
+      this._prewarming = false;
+    }
+  }
+
+  /**
+   * Unlocks mobile audio. MUST be called synchronously from a user gesture
+   * (tap on play/next/prev) before any await, or mobile browsers block playback.
+   */
+  activateForGesture(): void {
+    try { this.spotifyPlayer?.activateElement?.(); } catch { /* ignore */ }
+  }
+
+  private setYtVisible(visible: boolean): void {
+    const c = document.getElementById('yt-player-container');
+    if (c) c.style.display = visible ? 'block' : 'none';
+  }
+
+  setVolume(v: number): void {
+    this.state.volume = Math.min(1, Math.max(0, v));
+    if (this.state.volume > 0) this.state.isMuted = false;
+    localStorage.setItem('iko_volume', String(this.state.volume));
+    localStorage.setItem('iko_muted', String(this.state.isMuted));
+    this.applyVolume();
+  }
+
+  toggleMute(): void {
+    this.state.isMuted = !this.state.isMuted;
+    localStorage.setItem('iko_muted', String(this.state.isMuted));
+    this.applyVolume();
+  }
+
+  private applyVolume(): void {
+    const v = this.state.isMuted ? 0 : this.state.volume;
+    try {
+      switch (this.state.currentPlatform) {
+        case 'Spotify': this.spotifyPlayer?.setVolume(v); break;
+        case 'YouTube': this.ytPlayer?.setVolume?.(Math.round(v * 100)); break;
+        case 'AppleMusic': if (this.musicKitInstance) this.musicKitInstance.volume = v; break;
+      }
+    } catch { /* SDK not ready yet — volume re-applied on next track load */ }
+  }
 
   get currentTrack(): IkoTrack | null {
     if (this.state.currentIndex < 0 || this.state.currentIndex >= this.state.queue.length) return null;
@@ -53,12 +119,14 @@ export class PlayerService {
   }
 
   playPlaylist(tracks: IkoTrack[], startIndex = 0): void {
+    this.activateForGesture();
     this.state.queue = [...tracks];
     this.state.currentIndex = startIndex;
     this.playCurrentTrack();
   }
 
   playTrack(track: IkoTrack): void {
+    this.activateForGesture();
     this.state.queue = [track];
     this.state.currentIndex = 0;
     this.playCurrentTrack();
@@ -70,11 +138,13 @@ export class PlayerService {
   }
 
   async resume(): Promise<void> {
+    this.activateForGesture();
     this.state.isPlaying = true;
     await this.resumeCurrentSdk();
   }
 
   async next(): Promise<void> {
+    this.activateForGesture();
     if (this.state.repeatMode === 'one') {
       this.playCurrentTrack();
       return;
@@ -100,6 +170,7 @@ export class PlayerService {
   }
 
   async previous(): Promise<void> {
+    this.activateForGesture();
     if (this.state.positionMs > 3000) {
       this.seekTo(0);
       return;
@@ -159,6 +230,7 @@ export class PlayerService {
     this.state.currentPlatform = track.platform;
     this.state.positionMs = 0;
     this.state.durationMs = track.durationMs || 0;
+    if (track.platform !== 'YouTube') this.setYtVisible(false);
 
     try {
       switch (track.platform) {
@@ -173,8 +245,9 @@ export class PlayerService {
           break;
       }
       this.state.isPlaying = true;
+      this.applyVolume();
     } catch (err: any) {
-      this.snackBar.open(err.message || 'Playback failed', 'OK', { duration: 5000 });
+      toast(err.message || 'Playback failed');
       this.state.isPlaying = false;
     }
 
@@ -252,7 +325,7 @@ export class PlayerService {
       });
 
       this.spotifyPlayer.addListener('initialization_error', ({ message }: any) => {
-        this.snackBar.open('Spotify playback requires Premium. Upgrade at spotify.com', 'OK', { duration: 7000 });
+        toast('Spotify playback requires Premium. Upgrade at spotify.com');
         reject(new Error(message));
       });
 
@@ -267,6 +340,7 @@ export class PlayerService {
     }
 
     this.ytPlayer.loadVideoById(track.platformTrackId);
+    this.setYtVisible(true);
     this.startPositionPolling('youtube');
   }
 
@@ -292,7 +366,10 @@ export class PlayerService {
     if (!container) {
       container = document.createElement('div');
       container.id = 'yt-player-container';
-      container.style.cssText = 'position:fixed;width:1px;height:1px;bottom:0;right:0;overflow:hidden;';
+      // Visible small floating player: mobile browsers refuse to play hidden/zero-size video.
+      container.style.cssText =
+        'position:fixed;width:160px;height:90px;right:0.75rem;bottom:5.5rem;z-index:45;' +
+        'border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.28);display:none;';
       document.body.appendChild(container);
     }
 
@@ -301,8 +378,9 @@ export class PlayerService {
     container.appendChild(playerDiv);
 
     this.ytPlayer = new (window as any).YT.Player('yt-player', {
-      height: '1',
-      width: '1',
+      height: '90',
+      width: '160',
+      playerVars: { playsinline: 1, rel: 0 },
       events: {
         onReady: () => resolve(),
         onStateChange: (event: any) => {
@@ -354,7 +432,7 @@ export class PlayerService {
     try {
       await this.musicKitInstance.authorize();
     } catch {
-      this.snackBar.open('Apple Music playback requires an Apple Music subscription', 'OK', { duration: 7000 });
+      toast('Apple Music playback requires an Apple Music subscription');
       throw new Error('Apple Music authorization failed');
     }
 

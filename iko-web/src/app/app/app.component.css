@@ -1,13 +1,1 @@
-.main-content {
-  min-height: calc(100vh - 64px);
-}
-
-.main-content.player-active {
-  padding-bottom: 72px;
-}
-
-@media (max-width: 768px) {
-  .main-content.player-active {
-    padding-bottom: 64px;
-  }
-}
+/* Styles migrated to Tailwind utility classes in the template. */

@@ -1,5 +1,11 @@
-<app-header></app-header>
-<main class="main-content" [class.player-active]="playerService.state.currentPlatform">
-  <router-outlet></router-outlet>
+<app-header />
+<main
+  class="relative min-h-[calc(100vh-4rem)]"
+  [class.pb-16]="playerService.state.currentPlatform"
+  [class.sm:pb-20]="playerService.state.currentPlatform"
+  [@routeAnim]="getRoute(outlet)"
+>
+  <router-outlet #outlet="outlet" />
 </main>
-<app-player-bar></app-player-bar>
+<app-player-bar />
+<hlm-toaster [theme]="theme.theme()" position="bottom-right" />

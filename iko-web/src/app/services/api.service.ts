@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = environment.apiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -77,6 +78,16 @@ export class ApiService {
 
   reorderTracks(playlistId: string, orderedIds: string[]): Observable<any> {
     return this.http.patch(`${API_URL}/iko-playlists/${playlistId}/tracks/reorder`, { orderedIds });
+  }
+
+  uploadPlaylistCover(playlistId: string, file: File): Observable<any> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post(`${API_URL}/iko-playlists/${playlistId}/cover`, form);
+  }
+
+  removePlaylistCover(playlistId: string): Observable<any> {
+    return this.http.delete(`${API_URL}/iko-playlists/${playlistId}/cover`);
   }
 
   // Library

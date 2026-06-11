@@ -1,38 +1,56 @@
-<div class="auth-container">
-  <mat-card class="auth-card">
-    <mat-card-header>
-      <mat-card-title>Sign In</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="fill">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" type="email" autocomplete="email">
-          @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
-            <mat-error>Email is required</mat-error>
-          }
-          @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
-            <mat-error>Invalid email</mat-error>
-          }
-        </mat-form-field>
+<div
+  class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-b from-secondary to-background p-4"
+>
+  <div
+    class="w-full max-w-sm rounded-xl border bg-card p-8 text-card-foreground shadow-lg shadow-primary/5"
+  >
+    <h1 class="mb-6 text-center text-2xl font-bold">Sign In</h1>
 
-        <mat-form-field appearance="fill">
-          <mat-label>Password</mat-label>
-          <input matInput formControlName="password" type="password" autocomplete="current-password">
-          @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
-            <mat-error>Password is required</mat-error>
-          }
-        </mat-form-field>
-
-        @if (errorMessage) {
-          <p class="error-text">{{ errorMessage }}</p>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="email">Email</label>
+        <input
+          hlmInput
+          id="email"
+          formControlName="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
+        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+          <p class="text-sm text-destructive">Email is required</p>
         }
+        @if (form.get('email')?.touched && form.get('email')?.hasError('email')) {
+          <p class="text-sm text-destructive">Invalid email</p>
+        }
+      </div>
 
-        <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid" class="submit-btn">
-          Sign In
-        </button>
-      </form>
-      <p class="alt-link">Don't have an account? <a routerLink="/register">Sign Up</a></p>
-    </mat-card-content>
-  </mat-card>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="password">Password</label>
+        <input
+          hlmInput
+          id="password"
+          formControlName="password"
+          type="password"
+          autocomplete="current-password"
+        />
+        @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
+          <p class="text-sm text-destructive">Password is required</p>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <p class="text-center text-sm text-destructive">{{ errorMessage }}</p>
+      }
+
+      <button hlmBtn type="submit" [disabled]="form.invalid" class="mt-2 w-full">
+        Sign In
+      </button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-muted-foreground">
+      Don't have an account?
+      <a routerLink="/register" class="font-medium text-primary hover:underline">Sign Up</a>
+    </p>
+  </div>
 </div>

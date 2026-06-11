@@ -1,25 +1,22 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideMenu, lucideX, lucideSun, lucideMoon } from '@ng-icons/lucide';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmIcon } from '@spartan-ng/helm/icon';
 import { AuthService, UserInfo } from '../services/auth.service';
+import { ThemeService } from '../services/theme.service';
 
 @Component({
-  selector: 'app-header',
-  standalone: true,
-  imports: [
-    CommonModule, RouterLink, RouterLinkActive,
-    MatToolbarModule, MatButtonModule, MatIconModule, MatSidenavModule
-  ],
-  templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+    selector: 'app-header',
+    imports: [RouterLink, RouterLinkActive, NgIcon, HlmIcon, HlmButton],
+    viewProviders: [provideIcons({ lucideMenu, lucideX, lucideSun, lucideMoon })],
+    templateUrl: './header.component.html',
 })
 export class HeaderComponent {
   user: UserInfo | null = null;
   mobileMenuOpen = false;
+  readonly theme = inject(ThemeService);
 
   constructor(private authService: AuthService) {
     this.authService.currentUser$.subscribe(u => this.user = u);

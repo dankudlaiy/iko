@@ -1,37 +1,48 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
+import { trigger, transition, style, animate, stagger, query } from '@angular/animations';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePlus, lucideListMusic, lucidePlay, lucideLock } from '@ng-icons/lucide';
+import { toast } from 'ngx-sonner';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmLabel } from '@spartan-ng/helm/label';
+import { HlmIcon } from '@spartan-ng/helm/icon';
+import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
+import { HlmTooltip } from '@spartan-ng/helm/tooltip';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { ApiService } from '../services/api.service';
 import { PlayerService, IkoTrack } from '../services/player.service';
 import { PlatformBadgeComponent } from '../platform-badge/platform-badge.component';
+import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.component';
 
 @Component({
-  selector: 'app-library',
-  standalone: true,
-  imports: [
-    CommonModule, MatButtonModule, MatIconModule, MatTabsModule,
-    MatDialogModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
-    MatSnackBarModule, FormsModule, PlatformBadgeComponent,
-    MatMenuModule
-  ],
-  templateUrl: './library.component.html',
-  styleUrls: ['./library.component.css']
+    selector: 'app-library',
+    imports: [
+        FormsModule, NgIcon, HlmIcon, HlmButton, HlmInput, HlmLabel,
+        HlmSkeleton, HlmTooltip, ...HlmDropdownMenuImports, PlatformBadgeComponent, PlaylistCoverComponent
+    ],
+    viewProviders: [provideIcons({ lucidePlus, lucideListMusic, lucidePlay, lucideLock })],
+    templateUrl: './library.component.html',
+    animations: [
+        trigger('cardStagger', [
+            transition('* => *', [
+                query(':enter', [
+                    style({ opacity: 0, transform: 'scale(0.92) translateY(8px)' }),
+                    stagger(45, animate('220ms ease', style({ opacity: 1, transform: 'scale(1) translateY(0)' })))
+                ], { optional: true })
+            ])
+        ])
+    ]
 })
 export class LibraryComponent implements OnInit {
   ikoPlaylists: any[] = [];
+  loadingIkoPlaylists = true;
+
   platformTabs = [
-    { id: 'spotify', name: 'Spotify', connected: false },
-    { id: 'youtube', name: 'YouTube', connected: false },
+    { id: 'spotify',    name: 'Spotify',     connected: false },
+    { id: 'youtube',    name: 'YouTube',     connected: false },
     { id: 'applemusic', name: 'Apple Music', connected: false }
   ];
   selectedPlatformTab = 'spotify';
@@ -45,10 +56,12 @@ export class LibraryComponent implements OnInit {
   newPlaylistName = '';
   showNewPlaylistDialog = false;
 
+  readonly skeletonCards = Array(8).fill(0);
+  readonly skeletonTracks = Array(6).fill(0);
+
   constructor(
     private api: ApiService,
     private router: Router,
-    private snackBar: MatSnackBar,
     public player: PlayerService
   ) {}
 
@@ -58,9 +71,16 @@ export class LibraryComponent implements OnInit {
   }
 
   loadIkoPlaylists(): void {
+    this.loadingIkoPlaylists = true;
     this.api.getIkoPlaylists().subscribe({
-      next: res => this.ikoPlaylists = res.data || [],
-      error: () => this.ikoPlaylists = []
+      next: res => {
+        this.ikoPlaylists = res.data || [];
+        this.loadingIkoPlaylists = false;
+      },
+      error: () => {
+        this.ikoPlaylists = [];
+        this.loadingIkoPlaylists = false;
+      }
     });
   }
 
@@ -133,8 +153,8 @@ export class LibraryComponent implements OnInit {
       durationMs: track.durationMs
     };
     this.api.addTrackToPlaylist(ikoPlaylistId, body).subscribe({
-      next: () => this.snackBar.open('Track added', '', { duration: 2000 }),
-      error: err => this.snackBar.open(err.error?.error || 'Failed to add track', '', { duration: 3000 })
+      next: () => toast('Track added'),
+      error: err => toast(err.error?.error || 'Failed to add track')
     });
   }
 
@@ -150,7 +170,7 @@ export class LibraryComponent implements OnInit {
         this.newPlaylistName = '';
         this.router.navigate(['/library/playlist', res.data.id]);
       },
-      error: () => this.snackBar.open('Failed to create playlist', '', { duration: 3000 })
+      error: () => toast('Failed to create playlist')
     });
   }
 

@@ -1,15 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { HlmSpinner } from '@spartan-ng/helm/spinner';
+import { environment } from '../../environments/environment';
 
 @Component({
-  selector: 'app-callback',
-  standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule],
-  templateUrl: './callback.component.html',
-  styleUrls: ['./callback.component.css']
+    selector: 'app-callback',
+    imports: [RouterLink, HlmSpinner],
+    templateUrl: './callback.component.html',
 })
 export class CallbackComponent implements OnInit {
   loading = true;
@@ -31,7 +29,7 @@ export class CallbackComponent implements OnInit {
       return;
     }
 
-    this.http.get(`http://localhost:5000/api/accounts/callback/${platform}?code=${encodeURIComponent(code)}`)
+    this.http.get(`${environment.apiUrl}/accounts/callback/${platform}?code=${encodeURIComponent(code)}`)
       .subscribe({
         next: (res: any) => {
           if (res.data?.access_token) {

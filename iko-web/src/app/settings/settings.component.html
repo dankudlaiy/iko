@@ -1,53 +1,59 @@
-<div class="settings-container">
-  <h2 class="page-title">Settings</h2>
+<div class="mx-auto max-w-5xl px-4 py-8 sm:py-10">
+  <h2 class="mb-6 text-2xl font-bold tracking-tight">Settings</h2>
 
-  <div class="settings-grid">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
     <!-- Account Info -->
-    <div class="settings-section">
-      <mat-card class="info-card">
-        <mat-card-header>
-          <mat-card-title>Account</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          @if (user) {
-            <p class="user-email">{{ user.email }}</p>
-          }
-        </mat-card-content>
-        <mat-card-actions>
-          <button mat-raised-button color="warn" (click)="logout()">Logout</button>
-        </mat-card-actions>
-      </mat-card>
-    </div>
+    <section hlmCard class="h-fit">
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>Account</h3>
+      </div>
+      <div hlmCardContent>
+        @if (user) {
+          <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+        }
+      </div>
+      <div hlmCardFooter>
+        <button hlmBtn variant="destructive" (click)="logout()">Logout</button>
+      </div>
+    </section>
 
     <!-- Connected Platforms -->
-    <div class="settings-section">
-      <h3 class="section-title">Connected Platforms</h3>
-      <div class="platform-list">
+    <section>
+      <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        Connected Platforms
+      </h3>
+      <div class="flex flex-col gap-2">
         @for (p of platforms; track p.id) {
-          <div class="platform-row">
-            <div class="platform-info">
-              <span class="platform-icon">{{ p.icon }}</span>
-              <div class="platform-details">
-                <span class="platform-name">{{ p.name }}</span>
+          <div
+            class="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 transition-shadow hover:shadow-sm"
+          >
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="text-2xl" aria-hidden="true">{{ p.icon }}</span>
+              <div class="flex min-w-0 flex-col">
+                <span class="font-medium">{{ p.name }}</span>
                 @if (isConnected(p.id)) {
-                  <span class="connected-label">Connected {{ getDisplayName(p.id) ? 'as ' + getDisplayName(p.id) : '' }}</span>
+                  <span class="truncate text-xs text-emerald-600 dark:text-emerald-500">
+                    Connected {{ getDisplayName(p.id) ? 'as ' + getDisplayName(p.id) : '' }}
+                  </span>
                 } @else {
-                  <span class="not-connected-label">Not connected</span>
+                  <span class="text-xs text-muted-foreground">Not connected</span>
                 }
               </div>
             </div>
-            <div class="platform-actions">
+            <div class="shrink-0">
               @if (p.stub) {
-                <span class="coming-soon-badge">Coming Soon</span>
+                <span hlmBadge variant="secondary">Coming Soon</span>
               } @else if (isConnected(p.id)) {
-                <button mat-stroked-button color="warn" (click)="disconnect(p.id)">Disconnect</button>
+                <button hlmBtn variant="outline" size="sm" class="text-destructive hover:text-destructive" (click)="disconnect(p.id)">
+                  Disconnect
+                </button>
               } @else {
-                <button mat-stroked-button color="primary" (click)="connect(p)">Connect</button>
+                <button hlmBtn variant="outline" size="sm" (click)="connect(p)">Connect</button>
               }
             </div>
           </div>
         }
       </div>
-    </div>
+    </section>
   </div>
 </div>

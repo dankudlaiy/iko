@@ -1,44 +1,87 @@
 @if (track) {
-  <div class="player-bar" [class.loading]="s.isLoading">
-    <div class="player-left">
-      <img [src]="track.imageUrl || 'https://via.placeholder.com/48?text=♪'" [alt]="track.name" class="player-art" />
-      <div class="player-track-info">
-        <span class="player-track-name">{{ track.name }}</span>
-        <span class="player-track-artist">{{ track.artist }}</span>
+  <div
+    class="fixed inset-x-0 bottom-0 z-50 flex h-16 items-center gap-2 border-t bg-background px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:h-18 sm:gap-4 sm:px-4"
+  >
+    <!-- Track info -->
+    <div class="flex min-w-0 max-w-[50%] items-center gap-3 sm:max-w-[30%]">
+      <img
+        [src]="track.imageUrl || 'https://via.placeholder.com/48?text=♪'"
+        [alt]="track.name"
+        class="size-10 shrink-0 rounded-md object-cover shadow-sm sm:size-12"
+      />
+      <div class="flex min-w-0 flex-col">
+        <span class="truncate text-xs font-semibold sm:text-[0.8125rem]">{{ track.name }}</span>
+        <span class="truncate text-[0.6875rem] text-muted-foreground">{{ track.artist }}</span>
       </div>
-      <app-platform-badge [platform]="track.platform" size="sm"></app-platform-badge>
+      <app-platform-badge [platform]="track.platform" size="sm" />
     </div>
 
-    <div class="player-center">
-      <div class="player-controls">
-        <button mat-icon-button class="control-btn" (click)="player.toggleShuffle()"
-                [class.active]="s.isShuffle">
-          <mat-icon>shuffle</mat-icon>
+    <!-- Controls + progress -->
+    <div class="flex flex-1 flex-col items-center gap-0.5">
+      <div class="flex items-center gap-1">
+        <button
+          hlmBtn variant="ghost" size="icon"
+          class="hidden text-muted-foreground sm:inline-flex"
+          [class.text-primary]="s.isShuffle"
+          aria-label="Shuffle"
+          (click)="player.toggleShuffle()"
+        >
+          <ng-icon hlm name="lucideShuffle" />
         </button>
-        <button mat-icon-button class="control-btn" (click)="player.previous()">
-          <mat-icon>skip_previous</mat-icon>
+        <button hlmBtn variant="ghost" size="icon" class="text-muted-foreground" aria-label="Previous" (click)="player.previous()">
+          <ng-icon hlm name="lucideSkipBack" />
         </button>
-        <button mat-icon-button class="play-btn" (click)="togglePlay()">
-          <mat-icon>{{ s.isPlaying ? 'pause_circle_filled' : 'play_circle_filled' }}</mat-icon>
+        <button hlmBtn variant="ghost" size="icon" class="text-primary" [attr.aria-label]="s.isPlaying ? 'Pause' : 'Play'" (click)="togglePlay()">
+          <ng-icon hlm [name]="s.isPlaying ? 'lucidePause' : 'lucidePlay'" class="text-2xl" />
         </button>
-        <button mat-icon-button class="control-btn" (click)="player.next()">
-          <mat-icon>skip_next</mat-icon>
+        <button hlmBtn variant="ghost" size="icon" class="text-muted-foreground" aria-label="Next" (click)="player.next()">
+          <ng-icon hlm name="lucideSkipForward" />
         </button>
-        <button mat-icon-button class="control-btn" (click)="player.toggleRepeat()"
-                [class.active]="s.repeatMode !== 'none'">
-          <mat-icon>{{ s.repeatMode === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
+        <button
+          hlmBtn variant="ghost" size="icon"
+          class="hidden text-muted-foreground sm:inline-flex"
+          [class.text-primary]="s.repeatMode !== 'none'"
+          aria-label="Repeat"
+          (click)="player.toggleRepeat()"
+        >
+          <ng-icon hlm [name]="s.repeatMode === 'one' ? 'lucideRepeat1' : 'lucideRepeat'" />
         </button>
       </div>
-      <div class="player-progress">
-        <span class="time">{{ player.formatTime(s.positionMs) }}</span>
-        <input type="range" class="progress-slider" min="0" [max]="s.durationMs || 1"
-               [value]="s.positionMs" (input)="onSeek($event)" />
-        <span class="time">{{ player.formatTime(s.durationMs) }}</span>
+
+      <div class="hidden w-full max-w-[500px] items-center gap-2 sm:flex">
+        <span class="min-w-8 text-center text-[0.6875rem] text-muted-foreground">{{ player.formatTime(s.positionMs) }}</span>
+        <input
+          type="range"
+          class="h-1 flex-1 cursor-pointer accent-primary"
+          min="0"
+          [max]="s.durationMs || 1"
+          [value]="s.positionMs"
+          (input)="onSeek($event)"
+          aria-label="Seek"
+        />
+        <span class="min-w-8 text-center text-[0.6875rem] text-muted-foreground">{{ player.formatTime(s.durationMs) }}</span>
       </div>
+    </div>
+
+    <!-- Volume (desktop) -->
+    <div class="hidden items-center gap-1.5 sm:flex">
+      <button hlmBtn variant="ghost" size="icon" class="text-muted-foreground" [attr.aria-label]="s.isMuted ? 'Unmute' : 'Mute'" (click)="player.toggleMute()">
+        <ng-icon hlm [name]="volumeIcon" />
+      </button>
+      <input
+        type="range"
+        class="h-1 w-20 cursor-pointer accent-primary"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="s.isMuted ? 0 : s.volume"
+        (input)="onVolume($event)"
+        aria-label="Volume"
+      />
     </div>
 
     @if (s.isLoading) {
-      <div class="loading-overlay">
+      <div class="absolute inset-0 flex items-center justify-center bg-background/90 text-sm text-muted-foreground">
         <span>{{ s.loadingMessage }}</span>
       </div>
     }

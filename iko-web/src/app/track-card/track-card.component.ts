@@ -1,12 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { HlmBadge } from '@spartan-ng/helm/badge';
 
 @Component({
-  selector: 'app-track-card',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './track-card.component.html',
-  styleUrls: ['./track-card.component.css']
+    selector: 'app-track-card',
+    imports: [HlmBadge],
+    templateUrl: './track-card.component.html',
 })
 export class TrackCardComponent {
   @Input() name = '';

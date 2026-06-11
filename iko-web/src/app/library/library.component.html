@@ -1,136 +1,163 @@
-<div class="library-container">
+<div class="mx-auto max-w-7xl px-4 py-8">
   <!-- Iko Playlists Section -->
-  <div class="section">
-    <div class="section-header">
-      <h2>Your iko Playlists</h2>
-      <button mat-raised-button color="primary" (click)="showNewPlaylistDialog = true">
-        <mat-icon>add</mat-icon> New Playlist
+  <section class="mb-12">
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <h2 class="text-2xl font-bold tracking-tight">Your iko Playlists</h2>
+      <button hlmBtn (click)="showNewPlaylistDialog = true">
+        <ng-icon hlm name="lucidePlus" />
+        New Playlist
       </button>
     </div>
 
-    <div class="playlist-grid">
-      @for (playlist of ikoPlaylists; track playlist.id) {
-        <div class="playlist-card" (click)="openIkoPlaylist(playlist.id)">
-          <div class="playlist-cover">
-            @if (playlist.coverUrl) {
-              <img [src]="playlist.coverUrl" alt="" />
-            } @else {
-              <div class="cover-placeholder">
-                <mat-icon>library_music</mat-icon>
-              </div>
-            }
-            <div class="card-hover-overlay">
-              <mat-icon class="play-overlay-icon">play_arrow</mat-icon>
-            </div>
+    @if (loadingIkoPlaylists) {
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        @for (i of skeletonCards; track $index) {
+          <div class="flex flex-col gap-2 p-2">
+            <div hlmSkeleton class="aspect-square w-full rounded-lg"></div>
+            <div hlmSkeleton class="h-4 w-3/4"></div>
+            <div hlmSkeleton class="h-3 w-1/2"></div>
           </div>
-          <span class="playlist-name">{{ playlist.name }}</span>
-          <span class="playlist-count">{{ playlist.trackCount }} tracks</span>
-        </div>
-      }
-
-      <div class="playlist-card create-card" (click)="showNewPlaylistDialog = true">
-        <div class="playlist-cover">
-          <div class="cover-placeholder create-placeholder">
-            <mat-icon>add</mat-icon>
-          </div>
-        </div>
-        <span class="playlist-name">Create</span>
+        }
       </div>
-    </div>
-  </div>
+    } @else {
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" [@cardStagger]="ikoPlaylists.length">
+        @for (playlist of ikoPlaylists; track playlist.id) {
+          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="openIkoPlaylist(playlist.id)">
+            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+              <app-playlist-cover [coverUrl]="playlist.coverUrl" [images]="playlist.coverImages || []" class="block size-full" />
+              <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <ng-icon hlm name="lucidePlay" class="text-4xl text-white" />
+              </div>
+            </div>
+            <span class="truncate text-sm font-medium">{{ playlist.name }}</span>
+            <span class="text-xs text-muted-foreground">{{ playlist.trackCount }} tracks</span>
+          </button>
+        }
+
+        <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="showNewPlaylistDialog = true">
+          <div class="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors group-hover:border-primary group-hover:text-primary">
+            <ng-icon hlm name="lucidePlus" class="text-4xl" />
+          </div>
+          <span class="truncate text-sm font-medium">Create</span>
+        </button>
+      </div>
+    }
+  </section>
 
   <!-- Platform Playlists Section -->
-  <div class="section">
-    <h2>Your Platform Playlists</h2>
+  <section>
+    <h2 class="mb-4 text-2xl font-bold tracking-tight">Your Platform Playlists</h2>
 
-    <div class="platform-tabs">
+    <div class="mb-4 flex flex-wrap gap-2">
       @for (tab of platformTabs; track tab.id) {
-        <button class="tab-btn"
-                [class.active]="selectedPlatformTab === tab.id"
-                [class.disabled]="!tab.connected"
-                [matTooltip]="!tab.connected ? 'Connect in Settings' : ''"
-                (click)="selectPlatformTab(tab.id)">
-          <app-platform-badge [platform]="tab.id" size="sm"></app-platform-badge>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+          [class.border-primary]="selectedPlatformTab === tab.id && tab.connected"
+          [class.bg-accent]="selectedPlatformTab === tab.id && tab.connected"
+          [class.border-border]="!(selectedPlatformTab === tab.id && tab.connected)"
+          [class.text-muted-foreground]="!tab.connected"
+          [class.opacity-60]="!tab.connected"
+          [class.cursor-not-allowed]="!tab.connected"
+          [class.hover:bg-accent]="tab.connected"
+          [hlmTooltip]="!tab.connected ? 'Connect in Settings' : ''"
+          (click)="selectPlatformTab(tab.id)"
+        >
+          <app-platform-badge [platform]="tab.id" size="sm" />
           <span>{{ tab.name }}</span>
           @if (!tab.connected) {
-            <mat-icon class="lock-icon">lock</mat-icon>
+            <ng-icon hlm name="lucideLock" class="text-xs" />
           }
         </button>
       }
     </div>
 
     @if (loadingPlatform) {
-      <div class="loading-state">Loading playlists...</div>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        @for (i of skeletonCards; track $index) {
+          <div class="flex flex-col gap-2 p-2">
+            <div hlmSkeleton class="aspect-square w-full rounded-lg"></div>
+            <div hlmSkeleton class="h-4 w-3/4"></div>
+            <div hlmSkeleton class="h-3 w-1/2"></div>
+          </div>
+        }
+      </div>
     } @else {
-      <div class="playlist-grid">
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" [@cardStagger]="platformPlaylists.length">
         @for (pl of platformPlaylists; track pl.id) {
-          <div class="playlist-card" (click)="togglePlaylistExpand(pl.id)">
-            <div class="playlist-cover">
+          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="togglePlaylistExpand(pl.id)">
+            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
               @if (pl.imageUrl) {
-                <img [src]="pl.imageUrl" alt="" />
+                <img [src]="pl.imageUrl" alt="" class="size-full object-cover" />
               } @else {
-                <div class="cover-placeholder">
-                  <mat-icon>queue_music</mat-icon>
+                <div class="flex size-full items-center justify-center text-muted-foreground">
+                  <ng-icon hlm name="lucideListMusic" class="text-4xl" />
                 </div>
               }
-              <div class="card-hover-overlay" (click)="$event.stopPropagation(); playPlatformPlaylist(pl)">
-                <mat-icon class="play-overlay-icon">play_arrow</mat-icon>
+              <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" (click)="$event.stopPropagation(); playPlatformPlaylist(pl)">
+                <ng-icon hlm name="lucidePlay" class="text-4xl text-white" />
               </div>
             </div>
-            <span class="playlist-name">{{ pl.name }}</span>
-            <span class="playlist-count">{{ pl.trackCount }} tracks</span>
-          </div>
+            <span class="truncate text-sm font-medium">{{ pl.name }}</span>
+            <span class="text-xs text-muted-foreground">{{ pl.trackCount }} tracks</span>
+          </button>
         }
       </div>
 
       @if (expandedPlaylistId) {
-        <div class="expanded-tracks">
+        <div class="mt-4 flex flex-col gap-1 rounded-lg border bg-card p-2">
           @if (loadingTracks) {
-            <div class="loading-state">Loading tracks...</div>
+            @for (i of skeletonTracks; track $index) {
+              <div class="flex items-center gap-3 p-2">
+                <div hlmSkeleton class="size-10 rounded"></div>
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <div hlmSkeleton class="h-3.5 w-2/5"></div>
+                  <div hlmSkeleton class="h-3 w-1/4"></div>
+                </div>
+              </div>
+            }
           } @else {
             @for (track of expandedPlaylistTracks; track track.platformTrackId) {
-              <div class="track-row">
-                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" class="track-art" />
-                <div class="track-info">
-                  <span class="track-name">{{ track.name }}</span>
-                  <span class="track-artist">{{ track.artist }}</span>
+              <div class="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
+                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <span class="truncate text-sm font-medium">{{ track.name }}</span>
+                  <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
                 </div>
-                <div class="track-actions">
-                  <button mat-icon-button class="add-btn" [matMenuTriggerFor]="trackMenu">
-                    <mat-icon>add</mat-icon>
-                  </button>
-                  <mat-menu #trackMenu="matMenu">
+                <button hlmBtn variant="ghost" size="icon" [hlmDropdownMenuTrigger]="trackMenu" aria-label="Add to playlist">
+                  <ng-icon hlm name="lucidePlus" />
+                </button>
+                <ng-template #trackMenu>
+                  <div hlmDropdownMenu class="w-52">
                     @for (ip of ikoPlaylists; track ip.id) {
-                      <button mat-menu-item (click)="addToIkoPlaylist(track, ip.id)">
-                        {{ ip.name }}
-                      </button>
+                      <button hlmDropdownMenuItem (click)="addToIkoPlaylist(track, ip.id)">{{ ip.name }}</button>
                     }
                     @if (ikoPlaylists.length === 0) {
-                      <button mat-menu-item disabled>No playlists yet</button>
+                      <button hlmDropdownMenuItem disabled>No playlists yet</button>
                     }
-                  </mat-menu>
-                </div>
+                  </div>
+                </ng-template>
               </div>
             }
           }
         </div>
       }
     }
-  </div>
+  </section>
 </div>
 
-<!-- New Playlist Dialog Overlay -->
+<!-- New Playlist Dialog -->
 @if (showNewPlaylistDialog) {
-  <div class="dialog-backdrop" (click)="showNewPlaylistDialog = false">
-    <div class="dialog-card" (click)="$event.stopPropagation()">
-      <h3>Create New Playlist</h3>
-      <mat-form-field appearance="fill">
-        <mat-label>Playlist name</mat-label>
-        <input matInput [(ngModel)]="newPlaylistName" (keydown.enter)="createNewPlaylist()" autofocus />
-      </mat-form-field>
-      <div class="dialog-actions">
-        <button mat-button (click)="showNewPlaylistDialog = false">Cancel</button>
-        <button mat-raised-button color="primary" (click)="createNewPlaylist()" [disabled]="!newPlaylistName.trim()">Create</button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="showNewPlaylistDialog = false">
+    <div class="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl" (click)="$event.stopPropagation()">
+      <h3 class="mb-4 text-lg font-semibold">Create New Playlist</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="newPlaylistName">Playlist name</label>
+        <input hlmInput id="newPlaylistName" [(ngModel)]="newPlaylistName" (keydown.enter)="createNewPlaylist()" class="w-full" />
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button hlmBtn variant="ghost" (click)="showNewPlaylistDialog = false">Cancel</button>
+        <button hlmBtn (click)="createNewPlaylist()" [disabled]="!newPlaylistName.trim()">Create</button>
       </div>
     </div>
   </div>
