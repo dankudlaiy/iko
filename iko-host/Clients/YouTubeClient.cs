@@ -1,27 +1,32 @@
 namespace iko_host.Clients;
 
-using System.Net.Http.Headers;
+using iko_host.Exceptions;
 using Models;
 using Newtonsoft.Json;
 
-public class YouTubeClient
+public class YouTubeClient : IPlatformClient
 {
     public const string RedirectUri = "http://127.0.0.1:5000/api/accounts/callback/youtube";
 
-    private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<YouTubeClient> _logger;
 
     private readonly string _clientId;
     private readonly string _clientSecret;
     private readonly string? _apiKey;
 
-    public YouTubeClient()
+    public YouTubeClient(HttpClient httpClient, ILogger<YouTubeClient> logger)
     {
+        _httpClient = httpClient;
+        _logger = logger;
         _clientId = Environment.GetEnvironmentVariable("YOUTUBE_CLIENT_ID") ??
                     throw new InvalidOperationException("YOUTUBE_CLIENT_ID not found in environment");
         _clientSecret = Environment.GetEnvironmentVariable("YOUTUBE_CLIENT_SECRET") ??
                         throw new InvalidOperationException("YOUTUBE_CLIENT_SECRET not found in environment");
         _apiKey = Environment.GetEnvironmentVariable("YOUTUBE_API_KEY");
     }
+
+    public Platform Platform => Platform.YouTube;
 
     /// <summary>
     /// Search for a track. Uses OAuth token if provided, otherwise falls back to API key.
@@ -50,6 +55,14 @@ public class YouTubeClient
 
         var response = await _httpClient.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("YouTube search failed for {Name} - {Artist}: HTTP {Status}",
+                name, artist, (int)response.StatusCode);
+            return null;
+        }
+
         dynamic? obj = JsonConvert.DeserializeObject(content);
 
         if (obj?.items == null || !obj.items.HasValues)
@@ -81,75 +94,23 @@ public class YouTubeClient
                 durationMs = (int)System.Xml.XmlConvert.ToTimeSpan(isoDuration).TotalMilliseconds;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Duration is non-critical
+            _logger.LogWarning(ex, "Failed to fetch YouTube duration for video {VideoId}", videoId);
         }
 
         return new TrackModel
         {
             Name = name,
             Artist = artist,
-            YouTubeVideoId = videoId,
+            Platform = Platform.YouTube,
+            PlatformTrackId = videoId,
             ImageUrl = imageUrl,
-            DurationMs = durationMs,
-            Matched = true
+            DurationMs = durationMs
         };
     }
 
-    public async Task<List<TrackModel>> ParsePlaylist(string playlistId, string accessToken)
-    {
-        var tracks = new List<TrackModel>();
-        string? pageToken = null;
-
-        do
-        {
-            var url = $"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlistId}&maxResults=50";
-            if (pageToken != null)
-                url += $"&pageToken={pageToken}";
-
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Add("Authorization", $"Bearer {accessToken}");
-
-            var response = await _httpClient.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            dynamic? obj = JsonConvert.DeserializeObject(content);
-
-            if (obj?.items == null) break;
-
-            foreach (var item in obj.items)
-            {
-                string? imageUrl = null;
-                if (item.snippet?.thumbnails?.medium != null)
-                    imageUrl = item.snippet.thumbnails.medium.url.ToString();
-
-                string videoId = item.contentDetails?.videoId?.ToString()
-                                 ?? item.snippet?.resourceId?.videoId?.ToString() ?? "";
-
-                tracks.Add(new TrackModel
-                {
-                    Name = item.snippet?.title?.ToString() ?? "",
-                    Artist = item.snippet?.videoOwnerChannelTitle?.ToString() ?? "",
-                    YouTubeVideoId = videoId,
-                    ImageUrl = imageUrl,
-                    DurationMs = 0,
-                    Matched = true
-                });
-            }
-
-            pageToken = obj.nextPageToken?.ToString();
-        } while (pageToken != null);
-
-        var videoIds = tracks.Where(t => !string.IsNullOrEmpty(t.YouTubeVideoId)).Select(t => t.YouTubeVideoId!);
-        var durations = await FetchDurations(videoIds, accessToken);
-        foreach (var track in tracks.Where(t => t.YouTubeVideoId != null))
-            if (durations.TryGetValue(track.YouTubeVideoId!, out var ms))
-                track.DurationMs = ms;
-
-        return tracks;
-    }
-
-    public async Task<(string Url, string? ImageUrl)> CreatePlaylist(IEnumerable<string> videoIds, string accessToken, string? name = null)
+    public async Task<(string Url, string? ImageUrl)> CreatePlaylist(IEnumerable<string> trackIds, string accessToken, string? name = null)
     {
         // Create playlist
         var createData = new
@@ -170,6 +131,11 @@ public class YouTubeClient
 
         var createResponse = await _httpClient.SendAsync(createRequest);
         var createContent = await createResponse.Content.ReadAsStringAsync();
+
+        if (!createResponse.IsSuccessStatusCode)
+            throw new PlatformApiException(Platform.YouTube,
+                "Failed to create YouTube playlist", (int)createResponse.StatusCode);
+
         dynamic? playlist = JsonConvert.DeserializeObject(createContent);
 
         string playlistId = playlist!.id.ToString();
@@ -177,7 +143,7 @@ public class YouTubeClient
         string? imageUrl = playlist.snippet?.thumbnails?.medium?.url?.ToString();
 
         // Add videos
-        foreach (var videoId in videoIds)
+        foreach (var videoId in trackIds)
         {
             var addData = new
             {
@@ -258,7 +224,7 @@ public class YouTubeClient
         return ("", "");
     }
 
-    public async Task<List<object>> GetPlaylists(string accessToken)
+    public async Task<List<PlaylistSummary>> GetPlaylists(string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get,
             "https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50");
@@ -266,9 +232,14 @@ public class YouTubeClient
 
         var response = await _httpClient.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new PlatformApiException(Platform.YouTube,
+                "Failed to load YouTube playlists", (int)response.StatusCode);
+
         dynamic? obj = JsonConvert.DeserializeObject(content);
 
-        var playlists = new List<object>();
+        var playlists = new List<PlaylistSummary>();
         if (obj?.items == null) return playlists;
 
         foreach (var item in obj.items)
@@ -277,19 +248,19 @@ public class YouTubeClient
             if (item.snippet?.thumbnails?.medium != null)
                 imageUrl = item.snippet.thumbnails.medium.url.ToString();
 
-            playlists.Add(new
+            playlists.Add(new PlaylistSummary
             {
-                id = item.id.ToString(),
-                name = item.snippet?.title?.ToString() ?? "",
-                imageUrl,
-                trackCount = (int)(item.contentDetails?.itemCount ?? 0)
+                Id = item.id.ToString(),
+                Name = item.snippet?.title?.ToString() ?? "",
+                ImageUrl = imageUrl,
+                TrackCount = (int)(item.contentDetails?.itemCount ?? 0)
             });
         }
 
         return playlists;
     }
 
-    public async Task<List<object>> GetPlaylistTracks(string playlistId, string accessToken)
+    public async Task<List<LibraryTrack>> GetPlaylistTracks(string playlistId, string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get,
             $"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlistId}&maxResults=50");
@@ -297,9 +268,14 @@ public class YouTubeClient
 
         var response = await _httpClient.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new PlatformApiException(Platform.YouTube,
+                "Failed to load YouTube playlist tracks", (int)response.StatusCode);
+
         dynamic? obj = JsonConvert.DeserializeObject(content);
 
-        if (obj?.items == null) return new List<object>();
+        if (obj?.items == null) return new List<LibraryTrack>();
 
         var raw = new List<(string videoId, string name, string artist, string? imageUrl)>();
         foreach (var item in obj.items)
@@ -317,14 +293,14 @@ public class YouTubeClient
 
         var durations = await FetchDurations(raw.Select(r => r.videoId), accessToken);
 
-        return raw.Select(r => (object)new
+        return raw.Select(r => new LibraryTrack
         {
-            platformTrackId = r.videoId,
-            name = r.name,
-            artist = r.artist,
-            imageUrl = r.imageUrl,
-            durationMs = durations.GetValueOrDefault(r.videoId, 0),
-            platform = "YouTube"
+            PlatformTrackId = r.videoId,
+            Name = r.name,
+            Artist = r.artist,
+            ImageUrl = r.imageUrl,
+            DurationMs = durations.GetValueOrDefault(r.videoId, 0),
+            Platform = "YouTube"
         }).ToList();
     }
 
@@ -352,11 +328,20 @@ public class YouTubeClient
                         string id = item.id?.ToString() ?? "";
                         string iso = item.contentDetails?.duration?.ToString() ?? "";
                         if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(iso))
-                            try { result[id] = (int)System.Xml.XmlConvert.ToTimeSpan(iso).TotalMilliseconds; }
-                            catch { }
+                            try
+                            {
+                                result[id] = (int)System.Xml.XmlConvert.ToTimeSpan(iso).TotalMilliseconds;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to parse YouTube duration {Iso} for video {VideoId}", iso, id);
+                            }
                     }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch YouTube durations batch starting at {Index}", i);
+            }
         }
 
         return result;

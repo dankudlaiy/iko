@@ -54,9 +54,13 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddScoped<SpotifyClient>();
-builder.Services.AddScoped<YouTubeClient>();
-builder.Services.AddScoped<AppleMusicClient>();
+builder.Services.AddHttpClient<SpotifyClient>();
+builder.Services.AddHttpClient<YouTubeClient>();
+builder.Services.AddHttpClient<AppleMusicClient>();
+builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<SpotifyClient>());
+builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<YouTubeClient>());
+builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<AppleMusicClient>());
+builder.Services.AddTransient<PlatformClientFactory>();
 
 var app = builder.Build();
 

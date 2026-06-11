@@ -13,21 +13,15 @@ namespace iko_host.Controllers;
 [Authorize]
 public class SearchController : ControllerBase
 {
-    private readonly SpotifyClient _spotifyClient;
-    private readonly YouTubeClient _youTubeClient;
-    private readonly AppleMusicClient _appleMusicClient;
     private readonly AppDbContext _db;
+    private readonly PlatformClientFactory _clients;
+    private readonly ILogger<SearchController> _logger;
 
-    public SearchController(
-        SpotifyClient spotifyClient,
-        YouTubeClient youTubeClient,
-        AppleMusicClient appleMusicClient,
-        AppDbContext db)
+    public SearchController(AppDbContext db, PlatformClientFactory clients, ILogger<SearchController> logger)
     {
-        _spotifyClient = spotifyClient;
-        _youTubeClient = youTubeClient;
-        _appleMusicClient = appleMusicClient;
         _db = db;
+        _clients = clients;
+        _logger = logger;
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -38,118 +32,46 @@ public class SearchController : ControllerBase
         if (string.IsNullOrWhiteSpace(q))
             return BadRequest(new { data = (object?)null, error = "Query is required" });
 
-        var requestedPlatforms = (platforms ?? "Spotify,YouTube,AppleMusic")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var requested = (platforms ?? "Spotify,YouTube,AppleMusic")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(p => Enum.TryParse<Platform>(p, out _))
+            .Select(Enum.Parse<Platform>)
+            .ToList();
 
         var userId = GetUserId();
+        var accounts = await _db.ConnectedAccounts
+            .Where(ca => ca.UserId == userId && requested.Contains(ca.Platform))
+            .ToDictionaryAsync(ca => ca.Platform, ca => ca.AccessToken);
+
         var results = new Dictionary<string, List<object>>();
-        var tasks = new List<Task>();
 
-        foreach (var platform in requestedPlatforms)
+        var searches = requested.Select(async platform =>
         {
-            switch (platform)
+            var found = new List<object>();
+            try
             {
-                case "Spotify":
-                    tasks.Add(Task.Run(async () =>
+                var token = accounts.GetValueOrDefault(platform);
+                var track = await _clients.Get(platform).SearchForTrack(q, "", token);
+                if (track?.PlatformTrackId != null)
+                {
+                    found.Add(new
                     {
-                        try
-                        {
-                            var track = await _spotifyClient.SearchForTrack(q, "");
-                            lock (results)
-                            {
-                                results["Spotify"] = new List<object>();
-                                if (track != null)
-                                {
-                                    results["Spotify"].Add(new
-                                    {
-                                        platformTrackId = track.SpotifyId ?? "",
-                                        name = track.Name,
-                                        artist = track.Artist,
-                                        imageUrl = track.ImageUrl,
-                                        durationMs = track.DurationMs
-                                    });
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            lock (results) { results["Spotify"] = new List<object>(); }
-                        }
-                    }));
-                    break;
-
-                case "YouTube":
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var account = await _db.ConnectedAccounts
-                                .FirstOrDefaultAsync(ca => ca.UserId == userId && ca.Platform == Platform.YouTube);
-
-                            lock (results) { results["YouTube"] = new List<object>(); }
-
-                            // YouTube search works with API key (no connected account needed)
-                            var track = await _youTubeClient.SearchForTrack(q, "", account?.AccessToken);
-                            if (track != null)
-                            {
-                                lock (results)
-                                {
-                                    results["YouTube"].Add(new
-                                    {
-                                        platformTrackId = track.YouTubeVideoId ?? "",
-                                        name = track.Name,
-                                        artist = track.Artist,
-                                        imageUrl = track.ImageUrl,
-                                        durationMs = track.DurationMs
-                                    });
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            lock (results) { results["YouTube"] = new List<object>(); }
-                        }
-                    }));
-                    break;
-
-                case "AppleMusic":
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var account = await _db.ConnectedAccounts
-                                .FirstOrDefaultAsync(ca => ca.UserId == userId && ca.Platform == Platform.AppleMusic);
-
-                            lock (results) { results["AppleMusic"] = new List<object>(); }
-
-                            if (account == null) return;
-
-                            var track = await _appleMusicClient.SearchForTrack(q, "", account.AccessToken);
-                            if (track != null)
-                            {
-                                lock (results)
-                                {
-                                    results["AppleMusic"].Add(new
-                                    {
-                                        platformTrackId = track.AppleMusicId ?? "",
-                                        name = track.Name,
-                                        artist = track.Artist,
-                                        imageUrl = track.ImageUrl,
-                                        durationMs = track.DurationMs
-                                    });
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            lock (results) { results["AppleMusic"] = new List<object>(); }
-                        }
-                    }));
-                    break;
+                        platformTrackId = track.PlatformTrackId,
+                        name = track.Name,
+                        artist = track.Artist,
+                        imageUrl = track.ImageUrl,
+                        durationMs = track.DurationMs
+                    });
+                }
             }
-        }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Search on {Platform} failed for query {Query}", platform, q);
+            }
+            lock (results) { results[platform.ToString()] = found; }
+        });
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(searches);
 
         return Ok(new { data = results, error = (string?)null });
     }
