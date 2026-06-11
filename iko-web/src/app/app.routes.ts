@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { SettingsComponent } from './settings/settings.component';
@@ -12,7 +11,6 @@ export const routes: Routes = [
   { path: '', component: LibraryComponent, canActivate: [authGuard] },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'convert', component: HomeComponent },
   { path: 'library', redirectTo: '', pathMatch: 'full' },
   { path: 'library/playlist/:id', component: PlaylistEditorComponent, canActivate: [authGuard] },
   { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },

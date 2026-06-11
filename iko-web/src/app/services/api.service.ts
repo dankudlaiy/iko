@@ -9,27 +9,6 @@ const API_URL = environment.apiUrl;
 export class ApiService {
   constructor(private http: HttpClient) {}
 
-  // Playlist conversion
-  parsePlaylist(platform: string, link: string): Observable<any> {
-    return this.http.post(`${API_URL}/playlist/parse`, { platform: this.platformIndex(platform), link });
-  }
-
-  searchTracks(tracks: { name: string; artist: string }[], targetPlatform: string): Observable<any> {
-    return this.http.post(`${API_URL}/playlist/search`, {
-      tracks,
-      targetPlatform: this.platformIndex(targetPlatform)
-    });
-  }
-
-  createExternalPlaylist(targetPlatform: string, trackIds: string[], playlistName: string, accessToken?: string): Observable<any> {
-    return this.http.post(`${API_URL}/playlist/create`, {
-      targetPlatform: this.platformIndex(targetPlatform),
-      trackIds,
-      playlistName,
-      accessToken
-    });
-  }
-
   // Connected accounts
   getConnectedAccounts(): Observable<any> {
     return this.http.get(`${API_URL}/accounts`);
@@ -113,9 +92,7 @@ export class ApiService {
     const platforms: Record<string, number> = {
       spotify: 0,
       youtube: 1,
-      applemusic: 2,
-      soundcloud: 3,
-      deezer: 4
+      applemusic: 2
     };
     return platforms[platform.toLowerCase()] ?? 0;
   }

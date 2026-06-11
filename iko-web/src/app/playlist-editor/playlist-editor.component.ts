@@ -265,7 +265,7 @@ export class PlaylistEditorComponent implements OnInit {
   }
 
   platformName(index: number): string {
-    return ['Spotify', 'YouTube', 'AppleMusic', 'SoundCloud', 'Deezer'][index] || '';
+    return ['Spotify', 'YouTube', 'AppleMusic'][index] || '';
   }
 
   private toIkoTrack(t: any): IkoTrack {
