@@ -342,19 +342,6 @@ public class AccountsController : ControllerBase
         return Ok(new { data = true, error = (string?)null });
     }
 
-    // --- Stubs ---
-    [HttpGet("connect/soundcloud")]
-    public IActionResult ConnectSoundCloud()
-    {
-        return Ok(new { data = (object?)null, error = "SoundCloud integration coming soon" });
-    }
-
-    [HttpGet("connect/deezer")]
-    public IActionResult ConnectDeezer()
-    {
-        return Ok(new { data = (object?)null, error = "Deezer integration coming soon" });
-    }
-
     private Guid? ExtractUserIdFromJwt(string token)
     {
         try

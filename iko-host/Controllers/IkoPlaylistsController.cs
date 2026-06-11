@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using iko_host.Clients;
 using iko_host.Data;
 using iko_host.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,8 @@ public class IkoPlaylistsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly PlatformClientFactory _clients;
+    private readonly ILogger<IkoPlaylistsController> _logger;
 
     private static readonly Dictionary<string, string> AllowedImageTypes = new()
     {
@@ -23,10 +26,16 @@ public class IkoPlaylistsController : ControllerBase
     };
     private const long MaxCoverBytes = 5 * 1024 * 1024;
 
-    public IkoPlaylistsController(AppDbContext db, IWebHostEnvironment env)
+    public IkoPlaylistsController(
+        AppDbContext db,
+        IWebHostEnvironment env,
+        PlatformClientFactory clients,
+        ILogger<IkoPlaylistsController> logger)
     {
         _db = db;
         _env = env;
+        _clients = clients;
+        _logger = logger;
     }
 
     private string CoversDir => Path.Combine(
@@ -279,6 +288,66 @@ public class IkoPlaylistsController : ControllerBase
         return Ok(new { data = new { playlist.Id, playlist.Name, playlist.CoverUrl }, error = (string?)null });
     }
 
+    [HttpPost("{id:guid}/export")]
+    public async Task<IActionResult> Export(Guid id, [FromBody] ExportPlaylistRequest request)
+    {
+        var userId = GetUserId();
+        var playlist = await _db.IkoPlaylists
+            .Include(p => p.Tracks.OrderBy(t => t.Order))
+            .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+
+        if (playlist == null)
+            return NotFound(new { data = (object?)null, error = "Playlist not found" });
+        if (playlist.Tracks.Count == 0)
+            return BadRequest(new { data = (object?)null, error = "Playlist is empty" });
+
+        var account = await _db.ConnectedAccounts.FirstOrDefaultAsync(
+            ca => ca.UserId == userId && ca.Platform == request.TargetPlatform);
+        if (account == null)
+            return BadRequest(new { data = (object?)null, error = $"{request.TargetPlatform} is not connected" });
+
+        var client = _clients.Get(request.TargetPlatform);
+        var matchedIds = new List<string>();
+        var unmatched = new List<object>();
+
+        foreach (var track in playlist.Tracks)
+        {
+            if (track.Platform == request.TargetPlatform)
+            {
+                matchedIds.Add(track.PlatformTrackId);
+                continue;
+            }
+
+            var found = await client.SearchForTrack(track.Name, track.Artist, account.AccessToken);
+            if (found?.PlatformTrackId != null)
+                matchedIds.Add(found.PlatformTrackId);
+            else
+                unmatched.Add(new { track.Name, track.Artist });
+        }
+
+        if (matchedIds.Count == 0)
+            return BadRequest(new { data = (object?)null, error = "No tracks could be matched on the target platform" });
+
+        var (url, imageUrl) = await client.CreatePlaylist(matchedIds, account.AccessToken, playlist.Name);
+
+        _logger.LogInformation(
+            "Exported playlist {PlaylistId} to {Platform}: {Matched}/{Total} tracks",
+            id, request.TargetPlatform, matchedIds.Count, playlist.Tracks.Count);
+
+        return Ok(new
+        {
+            data = new
+            {
+                url,
+                imageUrl,
+                matchedCount = matchedIds.Count,
+                totalCount = playlist.Tracks.Count,
+                unmatchedTracks = unmatched
+            },
+            error = (string?)null
+        });
+    }
+
     [HttpDelete("{id:guid}/cover")]
     public async Task<IActionResult> RemoveCover(Guid id)
     {
@@ -319,4 +388,9 @@ public class AddTrackRequest
 public class ReorderRequest
 {
     public List<Guid> OrderedIds { get; set; } = new();
+}
+
+public class ExportPlaylistRequest
+{
+    public Platform TargetPlatform { get; set; }
 }
