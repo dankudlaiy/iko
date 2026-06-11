@@ -113,3 +113,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Exposes the implicit Program class to WebApplicationFactory in iko-host.Tests.
+public partial class Program { }
