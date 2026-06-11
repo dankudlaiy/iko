@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using iko_host.Clients;
 using iko_host.Data;
@@ -367,20 +368,29 @@ public class IkoPlaylistsController : ControllerBase
 
 public class CreateIkoPlaylistRequest
 {
+    [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 }
 
 public class UpdateIkoPlaylistRequest
 {
+    [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 }
 
 public class AddTrackRequest
 {
     public Platform Platform { get; set; }
+
+    [Required, MaxLength(200)]
     public string PlatformTrackId { get; set; } = string.Empty;
+
+    [Required, MaxLength(300)]
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(300)]
     public string Artist { get; set; } = string.Empty;
+
     public string? ImageUrl { get; set; }
     public int DurationMs { get; set; }
 }

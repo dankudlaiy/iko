@@ -391,5 +391,6 @@ public class ConfigController : ControllerBase
 
 public class AppleMusicTokenRequest
 {
+    [System.ComponentModel.DataAnnotations.Required]
     public string UserToken { get; set; } = string.Empty;
 }

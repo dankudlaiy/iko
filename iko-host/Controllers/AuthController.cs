@@ -26,9 +26,6 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-            return BadRequest(new { data = (object?)null, error = "Email and password are required" });
-
         if (await _db.Users.AnyAsync(u => u.Email == request.Email))
             return Conflict(new { data = (object?)null, error = "User with this email already exists" });
 
