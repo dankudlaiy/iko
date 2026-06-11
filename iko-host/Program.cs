@@ -2,6 +2,7 @@ using System.Text;
 using iko_host.Clients;
 using iko_host.Data;
 using iko_host.Infrastructure;
+using iko_host.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -77,6 +78,7 @@ builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<Spoti
 builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<YouTubeClient>());
 builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<AppleMusicClient>());
 builder.Services.AddTransient<PlatformClientFactory>();
+builder.Services.AddTransient<PlaylistExportService>();
 
 var app = builder.Build();
 

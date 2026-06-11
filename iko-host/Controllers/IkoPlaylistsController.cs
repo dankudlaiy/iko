@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using iko_host.Clients;
 using iko_host.Data;
 using iko_host.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using iko_host.Services;
 
 namespace iko_host.Controllers;
 
@@ -16,8 +16,7 @@ public class IkoPlaylistsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
-    private readonly PlatformClientFactory _clients;
-    private readonly ILogger<IkoPlaylistsController> _logger;
+    private readonly PlaylistExportService _exportService;
 
     private static readonly Dictionary<string, string> AllowedImageTypes = new()
     {
@@ -30,13 +29,11 @@ public class IkoPlaylistsController : ControllerBase
     public IkoPlaylistsController(
         AppDbContext db,
         IWebHostEnvironment env,
-        PlatformClientFactory clients,
-        ILogger<IkoPlaylistsController> logger)
+        PlaylistExportService exportService)
     {
         _db = db;
         _env = env;
-        _clients = clients;
-        _logger = logger;
+        _exportService = exportService;
     }
 
     private string CoversDir => Path.Combine(
@@ -307,46 +304,13 @@ public class IkoPlaylistsController : ControllerBase
         if (account == null)
             return BadRequest(new { data = (object?)null, error = $"{request.TargetPlatform} is not connected" });
 
-        var client = _clients.Get(request.TargetPlatform);
-        var matchedIds = new List<string>();
-        var unmatched = new List<object>();
+        var outcome = await _exportService.ExportAsync(
+            playlist.Tracks.ToList(), playlist.Name, request.TargetPlatform, account.AccessToken);
 
-        foreach (var track in playlist.Tracks)
-        {
-            if (track.Platform == request.TargetPlatform)
-            {
-                matchedIds.Add(track.PlatformTrackId);
-                continue;
-            }
-
-            var found = await client.SearchForTrack(track.Name, track.Artist, account.AccessToken);
-            if (found?.PlatformTrackId != null)
-                matchedIds.Add(found.PlatformTrackId);
-            else
-                unmatched.Add(new { track.Name, track.Artist });
-        }
-
-        if (matchedIds.Count == 0)
+        if (outcome == null)
             return BadRequest(new { data = (object?)null, error = "No tracks could be matched on the target platform" });
 
-        var (url, imageUrl) = await client.CreatePlaylist(matchedIds, account.AccessToken, playlist.Name);
-
-        _logger.LogInformation(
-            "Exported playlist {PlaylistId} to {Platform}: {Matched}/{Total} tracks",
-            id, request.TargetPlatform, matchedIds.Count, playlist.Tracks.Count);
-
-        return Ok(new
-        {
-            data = new
-            {
-                url,
-                imageUrl,
-                matchedCount = matchedIds.Count,
-                totalCount = playlist.Tracks.Count,
-                unmatchedTracks = unmatched
-            },
-            error = (string?)null
-        });
+        return Ok(new { data = outcome, error = (string?)null });
     }
 
     [HttpDelete("{id:guid}/cover")]
