@@ -14,6 +14,7 @@ import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { ApiService } from '../services/api.service';
 import { PlayerService, IkoTrack } from '../services/player.service';
+import { ConnectedAccount, IkoPlaylistSummary, LibraryPlaylist, LibraryTrack } from '../models';
 import { PlatformBadgeComponent } from '../platform-badge/platform-badge.component';
 import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.component';
 
@@ -37,7 +38,7 @@ import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.compone
     ]
 })
 export class LibraryComponent implements OnInit {
-  ikoPlaylists: any[] = [];
+  ikoPlaylists: IkoPlaylistSummary[] = [];
   loadingIkoPlaylists = true;
 
   platformTabs = [
@@ -46,10 +47,10 @@ export class LibraryComponent implements OnInit {
     { id: 'applemusic', name: 'Apple Music', connected: false }
   ];
   selectedPlatformTab = 'spotify';
-  platformPlaylists: any[] = [];
+  platformPlaylists: LibraryPlaylist[] = [];
   expandedPlaylistId: string | null = null;
-  expandedPlaylistTracks: any[] = [];
-  connectedAccounts: any[] = [];
+  expandedPlaylistTracks: LibraryTrack[] = [];
+  connectedAccounts: ConnectedAccount[] = [];
   loadingPlatform = false;
   loadingTracks = false;
 
@@ -143,7 +144,7 @@ export class LibraryComponent implements OnInit {
     });
   }
 
-  addToIkoPlaylist(track: any, ikoPlaylistId: string): void {
+  addToIkoPlaylist(track: LibraryTrack, ikoPlaylistId: string): void {
     const body = {
       platform: this.api.platformIndex(this.selectedPlatformTab),
       platformTrackId: track.platformTrackId,
@@ -168,19 +169,19 @@ export class LibraryComponent implements OnInit {
       next: res => {
         this.showNewPlaylistDialog = false;
         this.newPlaylistName = '';
-        this.router.navigate(['/library/playlist', res.data.id]);
+        if (res.data) this.router.navigate(['/library/playlist', res.data.id]);
       },
       error: () => toast('Failed to create playlist')
     });
   }
 
-  playPlatformPlaylist(playlist: any): void {
+  playPlatformPlaylist(playlist: LibraryPlaylist): void {
     if (this.expandedPlaylistId !== playlist.id) {
       this.togglePlaylistExpand(playlist.id);
     }
     setTimeout(() => {
       if (this.expandedPlaylistTracks.length > 0) {
-        const tracks: IkoTrack[] = this.expandedPlaylistTracks.map((t: any) => ({
+        const tracks: IkoTrack[] = this.expandedPlaylistTracks.map(t => ({
           platformTrackId: t.platformTrackId,
           name: t.name,
           artist: t.artist,

@@ -6,7 +6,7 @@ export interface IkoTrack {
   platformTrackId: string;
   name: string;
   artist: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   durationMs: number;
   platform: 'Spotify' | 'YouTube' | 'AppleMusic';
 }
@@ -43,11 +43,13 @@ export class PlayerService {
     isMuted: false
   };
 
+  // Third-party player SDKs (Spotify Web Playback, YouTube IFrame, MusicKit)
+  // ship no TypeScript typings, so their instances stay `any` deliberately.
   private spotifyPlayer: any = null;
   private spotifyDeviceId: string | null = null;
   private ytPlayer: any = null;
   private musicKitInstance: any = null;
-  private positionInterval: any = null;
+  private positionInterval: ReturnType<typeof setInterval> | null = null;
   private _prewarming = false;
 
   constructor(private api: ApiService) {
@@ -261,7 +263,7 @@ export class PlayerService {
       await this.initSpotifySdk();
     }
 
-    const tokenRes: any = await this.api.getAccountToken('spotify').toPromise();
+    const tokenRes = await this.api.getAccountToken('spotify').toPromise();
     const token = tokenRes?.data?.accessToken;
     if (!token) throw new Error('Spotify not connected');
 
@@ -292,7 +294,7 @@ export class PlayerService {
   }
 
   private async createSpotifyPlayer(): Promise<void> {
-    const tokenRes: any = await this.api.getAccountToken('spotify').toPromise();
+    const tokenRes = await this.api.getAccountToken('spotify').toPromise();
     const token = tokenRes?.data?.accessToken;
     if (!token) throw new Error('Spotify Premium required for playback');
 
@@ -301,7 +303,7 @@ export class PlayerService {
         name: 'iko',
         getOAuthToken: (cb: (t: string) => void) => {
           this.api.getAccountToken('spotify').subscribe({
-            next: (res: any) => cb(res?.data?.accessToken || ''),
+            next: res => cb(res.data?.accessToken || ''),
             error: () => cb('')
           });
         },
@@ -418,7 +420,7 @@ export class PlayerService {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    const configRes: any = await this.api.getAppleConfig().toPromise();
+    const configRes = await this.api.getAppleConfig().toPromise();
     const developerToken = configRes?.data?.developerToken;
     if (!developerToken) throw new Error('Apple Music not configured');
 

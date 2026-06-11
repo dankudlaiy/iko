@@ -5,6 +5,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { AuthService, UserInfo } from '../services/auth.service';
 import { ApiService } from '../services/api.service';
 import { PlayerService } from '../services/player.service';
+import { ConnectedAccount } from '../models';
 
 interface PlatformConfig {
   id: string;
@@ -19,7 +20,7 @@ interface PlatformConfig {
 })
 export class SettingsComponent implements OnInit {
   user: UserInfo | null = null;
-  connectedAccounts: any[] = [];
+  connectedAccounts: ConnectedAccount[] = [];
 
   platforms: PlatformConfig[] = [
     { id: 'spotify', name: 'Spotify', icon: '🎧' },
@@ -40,7 +41,7 @@ export class SettingsComponent implements OnInit {
 
   loadAccounts(): void {
     this.apiService.getConnectedAccounts().subscribe({
-      next: res => this.connectedAccounts = res.data || [],
+      next: res => this.connectedAccounts = res.data ?? [],
       error: () => this.connectedAccounts = []
     });
   }
@@ -65,8 +66,8 @@ export class SettingsComponent implements OnInit {
       next: res => {
         if (res.data?.url) {
           window.location.href = res.data.url;
-        } else if (res.message) {
-          toast(res.message);
+        } else if (res.error) {
+          toast(res.error);
         }
       }
     });

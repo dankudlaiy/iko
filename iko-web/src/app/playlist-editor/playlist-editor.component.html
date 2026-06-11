@@ -140,7 +140,7 @@
       <div class="mb-4 flex items-center gap-4">
         <!-- Cover with change / remove -->
         <div class="group/cover relative size-18 shrink-0 overflow-hidden rounded-lg bg-muted">
-          <app-playlist-cover [coverUrl]="playlist?.coverUrl" [images]="trackImages" class="block size-full" />
+          <app-playlist-cover [coverUrl]="playlist?.coverUrl ?? null" [images]="trackImages" class="block size-full" />
           <button
             type="button"
             class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 transition-opacity group-hover/cover:opacity-100"
@@ -203,15 +203,35 @@
           <ng-icon hlm name="lucidePlay" />
           Play All
         </button>
-        <button hlmBtn variant="outline" [hlmDropdownMenuTrigger]="exportMenu">Export</button>
+        <button hlmBtn variant="outline" [disabled]="exporting || tracks.length === 0" [hlmDropdownMenuTrigger]="exportMenu">
+          {{ exporting ? 'Exporting…' : 'Export' }}
+        </button>
         <ng-template #exportMenu>
           <div hlmDropdownMenu class="w-48">
-            <button hlmDropdownMenuItem (click)="exportStub()">Export to Spotify</button>
-            <button hlmDropdownMenuItem (click)="exportStub()">Export to YouTube</button>
-            <button hlmDropdownMenuItem (click)="exportStub()">Export to Apple Music</button>
+            <button hlmDropdownMenuItem (click)="exportTo('spotify', 'Spotify')">Export to Spotify</button>
+            <button hlmDropdownMenuItem (click)="exportTo('youtube', 'YouTube')">Export to YouTube</button>
+            <button hlmDropdownMenuItem (click)="exportTo('applemusic', 'Apple Music')">Export to Apple Music</button>
           </div>
         </ng-template>
       </div>
+
+      @if (exportResult) {
+        <div class="mt-4 rounded-lg border bg-card p-4 text-sm">
+          <p class="font-medium">
+            Exported {{ exportResult.matchedCount }} of {{ exportResult.totalCount }} tracks.
+            <a [href]="exportResult.url" target="_blank" rel="noopener" class="text-primary underline">Open playlist</a>
+          </p>
+          @if (exportResult.unmatchedTracks.length > 0) {
+            <p class="mt-2 text-muted-foreground">Not found on target platform:</p>
+            <ul class="mt-1 list-disc pl-5 text-muted-foreground">
+              @for (t of exportResult.unmatchedTracks; track $index) {
+                <li>{{ t.name }} — {{ t.artist }}</li>
+              }
+            </ul>
+          }
+          <button hlmBtn variant="ghost" size="sm" class="mt-2" (click)="exportResult = null">Dismiss</button>
+        </div>
+      }
     </div>
   </div>
 </div>

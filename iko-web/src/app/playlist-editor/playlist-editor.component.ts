@@ -16,6 +16,7 @@ import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { ApiService } from '../services/api.service';
 import { PlayerService, IkoTrack } from '../services/player.service';
+import { ExportResult, IkoPlaylistDetail, IkoPlaylistTrack, LibraryPlaylist, LibraryTrack, SearchResults, SearchTrack } from '../models';
 import { PlatformBadgeComponent } from '../platform-badge/platform-badge.component';
 import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.component';
 
@@ -33,13 +34,13 @@ import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.compone
 })
 export class PlaylistEditorComponent implements OnInit {
   playlistId = '';
-  playlist: any = null;
-  tracks: any[] = [];
+  playlist: IkoPlaylistDetail | null = null;
+  tracks: IkoPlaylistTrack[] = [];
   isEditingName = false;
   editName = '';
 
   searchQuery = '';
-  searchResults: Record<string, any[]> = {};
+  searchResults: SearchResults = {};
   searchLoading = false;
   private searchSubject = new Subject<string>();
 
@@ -49,9 +50,9 @@ export class PlaylistEditorComponent implements OnInit {
     { id: 'youtube', name: 'YouTube' },
     { id: 'applemusic', name: 'Apple Music' }
   ];
-  sourcePlaylists: any[] = [];
+  sourcePlaylists: LibraryPlaylist[] = [];
   expandedSourcePlaylist: string | null = null;
-  sourcePlaylistTracks: any[] = [];
+  sourcePlaylistTracks: LibraryTrack[] = [];
   loadingSourcePlaylists = false;
   loadingSourceTracks = false;
 
@@ -84,7 +85,7 @@ export class PlaylistEditorComponent implements OnInit {
     this.api.getIkoPlaylist(this.playlistId).subscribe({
       next: res => {
         this.playlist = res.data;
-        this.tracks = res.data?.tracks || [];
+        this.tracks = res.data?.tracks ?? [];
       }
     });
   }
@@ -104,7 +105,7 @@ export class PlaylistEditorComponent implements OnInit {
   }
 
   get trackImages(): string[] {
-    return this.tracks.map(t => t.imageUrl).filter((u: string | null): u is string => !!u);
+    return this.tracks.map(t => t.imageUrl).filter((u): u is string => !!u);
   }
 
   onCoverSelected(event: Event): void {
@@ -139,7 +140,7 @@ export class PlaylistEditorComponent implements OnInit {
     this.searchLoading = true;
     this.api.searchAllPlatforms(query).subscribe({
       next: res => {
-        this.searchResults = res.data || {};
+        this.searchResults = res.data ?? {};
         this.searchLoading = false;
       },
       error: () => {
@@ -158,7 +159,7 @@ export class PlaylistEditorComponent implements OnInit {
     this.sourcePlaylists = [];
     this.api.getLibraryPlaylists(this.selectedSourcePlatform).subscribe({
       next: res => {
-        this.sourcePlaylists = res.data || [];
+        this.sourcePlaylists = res.data ?? [];
         this.loadingSourcePlaylists = false;
       },
       error: () => {
@@ -182,7 +183,7 @@ export class PlaylistEditorComponent implements OnInit {
     this.loadingSourceTracks = true;
     this.api.getLibraryPlaylistTracks(this.selectedSourcePlatform, playlistId).subscribe({
       next: res => {
-        this.sourcePlaylistTracks = res.data || [];
+        this.sourcePlaylistTracks = res.data ?? [];
         this.loadingSourceTracks = false;
       },
       error: () => {
@@ -192,7 +193,7 @@ export class PlaylistEditorComponent implements OnInit {
     });
   }
 
-  addTrack(track: any, platform?: string): void {
+  addTrack(track: SearchTrack | LibraryTrack, platform?: string): void {
     const p = platform || this.selectedSourcePlatform;
     const body = {
       platform: this.api.platformIndex(p),
@@ -204,7 +205,7 @@ export class PlaylistEditorComponent implements OnInit {
     };
     this.api.addTrackToPlaylist(this.playlistId, body).subscribe({
       next: res => {
-        this.tracks.push(res.data);
+        if (res.data) this.tracks.push(res.data);
         toast('Track added');
       },
       error: err => toast(err.error?.error || 'Failed')
@@ -223,7 +224,7 @@ export class PlaylistEditorComponent implements OnInit {
     });
   }
 
-  onDrop(event: CdkDragDrop<any[]>): void {
+  onDrop(event: CdkDragDrop<IkoPlaylistTrack[]>): void {
     moveItemInArray(this.tracks, event.previousIndex, event.currentIndex);
     const orderedIds = this.tracks.map(t => t.id);
     this.api.reorderTracks(this.playlistId, orderedIds).subscribe();
@@ -235,7 +236,7 @@ export class PlaylistEditorComponent implements OnInit {
     this.player.playPlaylist(queue, 0);
   }
 
-  playTrack(track: any): void {
+  playTrack(track: IkoPlaylistTrack): void {
     const queue: IkoTrack[] = this.tracks.map(t => this.toIkoTrack(t));
     const index = this.tracks.indexOf(track);
     this.player.playPlaylist(queue, index >= 0 ? index : 0);
@@ -254,8 +255,33 @@ export class PlaylistEditorComponent implements OnInit {
     this.player.playPlaylist(queue, 0);
   }
 
-  exportStub(): void {
-    toast('Export coming soon');
+  exporting = false;
+  exportResult: ExportResult | null = null;
+
+  exportTo(platform: string, platformLabel: string): void {
+    if (this.exporting) return;
+    this.exporting = true;
+    this.exportResult = null;
+    // getAccountToken refreshes a stale access token server-side before exporting
+    this.api.getAccountToken(platform).subscribe({
+      next: () => {
+        this.api.exportIkoPlaylist(this.playlistId, platform).subscribe({
+          next: res => {
+            this.exporting = false;
+            this.exportResult = res.data;
+            toast(`Exported ${res.data?.matchedCount}/${res.data?.totalCount} tracks to ${platformLabel}`);
+          },
+          error: err => {
+            this.exporting = false;
+            toast(err.error?.error || 'Export failed');
+          }
+        });
+      },
+      error: () => {
+        this.exporting = false;
+        toast(`${platformLabel} is not connected`);
+      }
+    });
   }
 
   formatDuration(ms: number): string {
@@ -268,7 +294,7 @@ export class PlaylistEditorComponent implements OnInit {
     return ['Spotify', 'YouTube', 'AppleMusic'][index] || '';
   }
 
-  private toIkoTrack(t: any): IkoTrack {
+  private toIkoTrack(t: IkoPlaylistTrack): IkoTrack {
     return {
       platformTrackId: t.platformTrackId,
       name: t.name,

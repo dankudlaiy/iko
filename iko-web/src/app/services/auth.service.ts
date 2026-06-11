@@ -3,10 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { ApiResponse } from '../models';
 
 export interface UserInfo {
   email: string;
   createdAt?: string;
+}
+
+export interface AuthResult {
+  token: string;
+  email: string;
 }
 
 const TOKEN_KEY = 'iko_token';
@@ -31,8 +37,8 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  register(email: string, password: string): Observable<any> {
-    return this.http.post<any>(`${API_URL}/register`, { email, password }).pipe(
+  register(email: string, password: string): Observable<ApiResponse<AuthResult>> {
+    return this.http.post<ApiResponse<AuthResult>>(`${API_URL}/register`, { email, password }).pipe(
       tap(res => {
         if (res.data?.token) {
           localStorage.setItem(TOKEN_KEY, res.data.token);
@@ -42,8 +48,8 @@ export class AuthService {
     );
   }
 
-  login(email: string, password: string): Observable<any> {
-    return this.http.post<any>(`${API_URL}/login`, { email, password }).pipe(
+  login(email: string, password: string): Observable<ApiResponse<AuthResult>> {
+    return this.http.post<ApiResponse<AuthResult>>(`${API_URL}/login`, { email, password }).pipe(
       tap(res => {
         if (res.data?.token) {
           localStorage.setItem(TOKEN_KEY, res.data.token);
@@ -60,7 +66,7 @@ export class AuthService {
   }
 
   private loadUser(): void {
-    this.http.get<any>(`${API_URL}/me`).subscribe({
+    this.http.get<ApiResponse<UserInfo>>(`${API_URL}/me`).subscribe({
       next: res => {
         if (res.data) {
           this.currentUserSubject.next(res.data);

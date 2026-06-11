@@ -26,12 +26,12 @@ export class PlayerBarComponent {
   get track() { return this.player.currentTrack; }
   get s() { return this.player.state; }
 
-  onSeek(event: any): void {
-    this.player.seekTo(event.target.value);
+  onSeek(event: Event): void {
+    this.player.seekTo(Number((event.target as HTMLInputElement).value));
   }
 
-  onVolume(event: any): void {
-    this.player.setVolume(Number(event.target.value));
+  onVolume(event: Event): void {
+    this.player.setVolume(Number((event.target as HTMLInputElement).value));
   }
 
   get volumeIcon(): string {

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { HlmSpinner } from '@spartan-ng/helm/spinner';
 import { environment } from '../../environments/environment';
+import { ApiResponse } from '../models';
 
 @Component({
     selector: 'app-callback',
@@ -29,9 +30,10 @@ export class CallbackComponent implements OnInit {
       return;
     }
 
-    this.http.get(`${environment.apiUrl}/accounts/callback/${platform}?code=${encodeURIComponent(code)}`)
+    this.http.get<ApiResponse<{ access_token?: string }>>(
+      `${environment.apiUrl}/accounts/callback/${platform}?code=${encodeURIComponent(code)}`)
       .subscribe({
-        next: (res: any) => {
+        next: res => {
           if (res.data?.access_token) {
             localStorage.setItem('access_token', res.data.access_token);
           }
