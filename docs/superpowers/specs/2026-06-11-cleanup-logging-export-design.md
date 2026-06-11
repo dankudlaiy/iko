@@ -1,16 +1,16 @@
-# iko — рефакторинг, логирование, Export, типизация (дизайн)
+# iko — refactoring, logging, Export, typing (design)
 
-Дата: 2026-06-11. Статус: одобрено пользователем.
+Date: 2026-06-11. Status: approved by user.
 
-## Цель
+## Goal
 
-Довести проект до «дипломного» качества: логирование и обработка ошибок, устранение
-дублирования через общий интерфейс клиентов платформ, замена заглушек реальной фичей
-Export, типизация фронтенда, серверная валидация, EF-миграции.
+Bring the project to "thesis-grade" quality: logging and error handling, deduplication
+via a shared platform-client interface, replacing stubs with a real Export feature,
+frontend typing, server-side validation, EF migrations.
 
-Ротация секретов (.env в git) — отложена до этапа деплоя, в этот объём не входит.
+Secret rotation (.env in git) is deferred to the deployment stage and is out of scope here.
 
-## 1. Общий интерфейс клиентов платформ
+## 1. Shared platform-client interface
 
 ```csharp
 public interface IPlatformClient
@@ -23,84 +23,84 @@ public interface IPlatformClient
 }
 ```
 
-- Реализуют `SpotifyClient`, `YouTubeClient`, `AppleMusicClient`.
-- Дублирующая Spotify-логика из `LibraryController` (`new HttpClient()`, `dynamic`)
-  переезжает в `SpotifyClient` (методы `GetPlaylists`, `GetPlaylistTracks`).
-- Все клиенты переводятся на `IHttpClientFactory` (`AddHttpClient<T>()`).
-- `PlatformClientFactory` резолвит `Platform` → `IPlatformClient`; для неподдерживаемых
-  платформ кидает `PlatformNotSupportedException`.
-- Контроллеры (`LibraryController`, новый Export) используют фабрику вместо switch.
-- Новая модель `PlaylistSummary` (id, name, imageUrl, trackCount) вместо анонимных объектов.
+- Implemented by `SpotifyClient`, `YouTubeClient`, `AppleMusicClient`.
+- The duplicated Spotify logic in `LibraryController` (`new HttpClient()`, `dynamic`)
+  moves into `SpotifyClient` (`GetPlaylists`, `GetPlaylistTracks`).
+- All clients switch to `IHttpClientFactory` (`AddHttpClient<T>()`).
+- `PlatformClientFactory` resolves `Platform` → `IPlatformClient`; unsupported
+  platforms throw a dedicated exception.
+- Controllers (`LibraryController`, the new Export) use the factory instead of switches.
+- New `PlaylistSummary` model (id, name, imageUrl, trackCount) replaces anonymous objects.
 
-## 2. Логирование и обработка ошибок
+## 2. Logging and error handling
 
-- **Serilog** (`Serilog.AspNetCore`): консоль + rolling-файл `logs/iko-.log`
+- **Serilog** (`Serilog.AspNetCore`): console + rolling file `logs/iko-.log`
   (daily), `UseSerilogRequestLogging()`.
-- `ILogger<T>` во всех клиентах и контроллерах.
-- Пустые `catch { }` в `YouTubeClient` и глотание исключений в `SearchController`
-  заменяются на `LogWarning` с контекстом (платформа, трек, HTTP-статус). Поведение
-  graceful degradation (одна платформа упала — поиск продолжается) сохраняется.
-- Глобальный обработчик: `IExceptionHandler` (.NET 8) + `AddProblemDetails()`.
-  Необработанное исключение → лог + ProblemDetails 500.
-  `PlatformApiException` (новое исключение, кидается клиентами при ошибках внешних
-  API) → 502 с указанием платформы.
-- Ожидаемые ошибки контроллеров остаются в формате `{ data, error }`.
-- Исправить CORS в Program.cs: убрать противоречие `WithOrigins` + `AllowAnyOrigin`,
-  оставить `WithOrigins("http://localhost:4200")`.
+- `ILogger<T>` in all clients and controllers.
+- Empty `catch { }` blocks in `YouTubeClient` and swallowed exceptions in
+  `SearchController` become `LogWarning` with context (platform, track, HTTP status).
+  Graceful degradation behavior (one platform failing does not break the search)
+  is preserved.
+- Global handler: `IExceptionHandler` (.NET 8). Unhandled exception → log + 500.
+  `PlatformApiException` (new exception thrown by clients on external API errors)
+  → 502 with the platform name.
+- Expected controller errors keep the `{ data, error }` envelope.
+- Fix CORS in Program.cs: remove the `WithOrigins` + `AllowAnyOrigin` contradiction,
+  keep `WithOrigins("http://localhost:4200")`.
 
-## 3. Export вместо /convert
+## 3. Export instead of /convert
 
-Удаляется:
-- маршрут `/convert` и `HomeComponent` (ts/html/css/spec);
-- `PlaylistController` целиком и его DTO (`ParseRequest`, `SearchRequest`,
+Removed:
+- the `/convert` route and `HomeComponent` (ts/html/css);
+- `PlaylistController` entirely with its DTOs (`ParseRequest`, `SearchRequest`,
   `CreatePlaylistApiRequest`);
-- методы `parsePlaylist`, `searchTracks`, `createExternalPlaylist` из `ApiService`.
+- `parsePlaylist`, `searchTracks`, `createExternalPlaylist` methods in `ApiService`.
 
-Добавляется:
-- `POST /api/iko-playlists/{id}/export`, тело `{ targetPlatform }`.
-  Логика: трек с целевой платформы → берём `PlatformTrackId` напрямую; иначе
-  `SearchForTrack(name, artist)`. Создаём плейлист через `IPlatformClient.CreatePlaylist`.
-  Ответ: `{ url, matchedCount, totalCount, unmatchedTracks }`.
-- UI в редакторе плейлиста: кнопка Export → дропдаун подключённых платформ →
-  индикатор прогресса → диалог с ссылкой и списком ненайденных треков.
+Added:
+- `POST /api/iko-playlists/{id}/export`, body `{ targetPlatform }`.
+  Logic: a track already on the target platform → use its `PlatformTrackId` directly;
+  otherwise `SearchForTrack(name, artist)`. Create the playlist via
+  `IPlatformClient.CreatePlaylist`.
+  Response: `{ url, matchedCount, totalCount, unmatchedTracks }`.
+- UI in the playlist editor: Export button → dropdown of connected platforms →
+  progress indicator → result panel with the link and the list of unmatched tracks.
 
-## 4. Зачистка SoundCloud/Deezer
+## 4. SoundCloud/Deezer cleanup
 
-- Убрать из списков платформ в settings, из `platform-badge`.
-- Удалить заглушки `connect/soundcloud`, `connect/deezer` в `AccountsController`.
-- Ветки switch исчезают вместе с переходом на фабрику.
-- Значения enum `Platform` сохраняются (совместимость БД; в записке — «перспективы
-  развития»).
+- Remove from platform lists in settings and from `platform-badge`.
+- Delete the `connect/soundcloud`, `connect/deezer` stubs in `AccountsController`.
+- Switch branches disappear together with the factory migration.
+- `Platform` enum values stay (DB compatibility; described as "future work" in the thesis).
 
-## 5. Серверная валидация (DataAnnotations)
+## 5. Server-side validation (DataAnnotations)
 
-- `[Required]`, `[EmailAddress]`, `[MinLength(8)]` (пароль), `[MaxLength(100)]`
-  (имена плейлистов) на request-DTO.
-- `[ApiController]` даёт автоматический 400; дублирующие ручные проверки убрать.
+- `[Required]`, `[EmailAddress]`, `[MinLength(8)]` (password), `[MaxLength(100)]`
+  (playlist names) on request DTOs.
+- `[ApiController]` provides automatic 400; remove duplicated manual checks.
 
-## 6. Типизация фронтенда
+## 6. Frontend typing
 
 - `src/app/models.ts`: `Track`, `IkoPlaylist`, `LibraryPlaylist`, `SearchResults`,
   `ConnectedAccount`, `UserInfo`, `ExportResult`,
   `ApiResponse<T> = { data: T | null; error: string | null }`.
-- `ApiService` полностью типизирован; `any` в компонентах заменяется интерфейсами.
+- `ApiService` fully typed; `any` in components replaced with interfaces.
 
-## 7. Миграции EF
+## 7. EF migrations
 
-- Создать миграцию `InitialCreate`; `EnsureCreated()` → `Migrate()` в Program.cs.
-- Локальный `iko.db` удаляется и пересоздаётся миграцией (одобрено пользователем —
-  локальные тестовые данные не нужны).
+- Create an `InitialCreate` migration; `EnsureCreated()` → `Migrate()` in Program.cs.
+- The local `iko.db` is deleted and recreated by the migration (approved by the user —
+  local test data is disposable).
 
-## Порядок реализации
+## Implementation order
 
-1. Бэкенд-рефакторинг: `IPlatformClient`, перенос Spotify-логики, `IHttpClientFactory`,
-   фабрика, переписать `LibraryController`.
-2. Serilog + `IExceptionHandler` + CORS-фикс.
-3. Export-эндпоинт + удаление PlaylistController.
-4. Фронтенд: удалить /convert и HomeComponent, Export UI, зачистка SoundCloud/Deezer.
-5. Типизация (`models.ts`, ApiService, компоненты).
+1. Backend refactoring: `IPlatformClient`, move Spotify logic, `IHttpClientFactory`,
+   factory, rewrite `LibraryController`.
+2. Serilog + `IExceptionHandler` + CORS fix.
+3. Export endpoint + remove PlaylistController.
+4. Frontend: remove /convert and HomeComponent, Export UI, SoundCloud/Deezer cleanup.
+5. Typing (`models.ts`, ApiService, components).
 6. DataAnnotations.
-7. Миграции EF, пересоздание dev-БД.
+7. EF migrations, recreate the dev DB.
 
-После каждого блока — сборка `dotnet build` / `ng build`; в конце ручная проверка
-ключевых флоу (библиотека, редактор, export, поиск).
+After each block — `dotnet build` / `ng build`; at the end — manual verification of
+the key flows (library, editor, export, search).

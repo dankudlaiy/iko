@@ -1,23 +1,23 @@
-# iko: рефакторинг клиентов, логирование, Export — Implementation Plan
+# iko: platform-client refactor, logging, Export — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Привести iko к «дипломному» качеству: общий интерфейс `IPlatformClient`, Serilog-логирование + глобальный exception handler, фича Export вместо заглушки и удалённого `/convert`, зачистка SoundCloud/Deezer, типизация фронтенда, DataAnnotations, EF-миграции.
+**Goal:** Bring iko to thesis-grade quality: a shared `IPlatformClient` interface, Serilog logging + a global exception handler, an Export feature replacing the stub and the removed `/convert` page, SoundCloud/Deezer cleanup, frontend typing, DataAnnotations, EF migrations.
 
-**Architecture:** Бэкенд: три клиента платформ реализуют `IPlatformClient`, резолвятся через `PlatformClientFactory`, получают `HttpClient` из `IHttpClientFactory` и `ILogger<T>`. Контроллеры теряют switch-простыни и дублирование. Необработанные исключения ловит `IExceptionHandler` и возвращает существующий конверт `{ data, error }` (не ProblemDetails — фронтенд уже парсит конверт через `err.error?.error`). Фронтенд: единый `models.ts`, типизированный `ApiService`.
+**Architecture:** Backend: the three platform clients implement `IPlatformClient`, are resolved via `PlatformClientFactory`, get their `HttpClient` from `IHttpClientFactory` plus `ILogger<T>`. Controllers lose their switch ladders and duplication. Unhandled exceptions are caught by an `IExceptionHandler` that returns the existing `{ data, error }` envelope (not ProblemDetails — the frontend already parses the envelope via `err.error?.error`). Frontend: a single `models.ts`, fully typed `ApiService`.
 
 **Tech Stack:** ASP.NET Core 8, EF Core 8 + SQLite, Serilog.AspNetCore, Angular 20, spartan/ui.
 
-**Тестирование:** В проекте нет тестовой инфраструктуры для бэкенда; юнит-тесты — отдельный следующий этап по плану пользователя (вне этого объёма). Верификация каждой задачи: `dotnet build` (iko-host), `npx ng build` (iko-web), в конце — ручная проверка ключевых флоу. Спека: `docs/superpowers/specs/2026-06-11-cleanup-logging-export-design.md`.
+**Testing:** The backend has no test infrastructure; unit tests are a separate upcoming work item (out of scope here). Verification per task: `dotnet build` (iko-host), `npx ng build` (iko-web), plus a manual smoke test of the key flows at the end. Spec: `docs/superpowers/specs/2026-06-11-cleanup-logging-export-design.md`.
 
-**Важные отклонения от спеки (осознанные):**
-- Исключение названо `UnsupportedPlatformException`, а не `PlatformNotSupportedException` — имя заняла `System.PlatformNotSupportedException`.
-- Глобальный handler возвращает конверт `{ data, error }` вместо ProblemDetails — консистентность с фронтендом.
-- `GetPlaylistTracks` возвращает `List<LibraryTrack>` (а не `List<TrackModel>`): фронтенд ждёт поле `platform` строкой (`"Spotify"`), а `TrackModel` сериализует enum числом.
+**Deliberate deviations from the spec:**
+- The exception is named `UnsupportedPlatformException`, not `PlatformNotSupportedException` — the latter clashes with `System.PlatformNotSupportedException`.
+- The global handler returns the `{ data, error }` envelope instead of ProblemDetails — consistency with the frontend.
+- `GetPlaylistTracks` returns `List<LibraryTrack>` (not `List<TrackModel>`): the frontend expects `platform` as a string (`"Spotify"`), while `TrackModel` serializes the enum as a number.
 
 ---
 
-### Task 1: Модели и интерфейс `IPlatformClient`
+### Task 1: Models and the `IPlatformClient` interface
 
 **Files:**
 - Create: `iko-host/Clients/IPlatformClient.cs`
@@ -27,7 +27,7 @@
 - Create: `iko-host/Exceptions/UnsupportedPlatformException.cs`
 - Modify: `iko-host/Models/TrackModel.cs`
 
-- [ ] **Step 1: Создать модели**
+- [x] **Step 1: Create the models**
 
 `iko-host/Models/PlaylistSummary.cs`:
 ```csharp
@@ -57,7 +57,7 @@ public class LibraryTrack
 }
 ```
 
-`iko-host/Models/TrackModel.cs` — заменить платформо-специфичные id единым полем:
+`iko-host/Models/TrackModel.cs` — replace platform-specific ids with a unified field:
 ```csharp
 namespace iko_host.Models;
 
@@ -71,9 +71,9 @@ public class TrackModel
     public string? PlatformTrackId { get; set; }
 }
 ```
-(Поля `SpotifyId`, `YouTubeVideoId`, `AppleMusicId`, `Matched` удалить — их потребители переписываются в задачах 2–6 и 8.)
+(Drop `SpotifyId`, `YouTubeVideoId`, `AppleMusicId`, `Matched` — their consumers are rewritten in Tasks 2–6 and 8.)
 
-- [ ] **Step 2: Создать исключения**
+- [x] **Step 2: Create the exceptions**
 
 `iko-host/Exceptions/PlatformApiException.cs`:
 ```csharp
@@ -113,7 +113,7 @@ public class UnsupportedPlatformException : Exception
 }
 ```
 
-- [ ] **Step 3: Создать интерфейс**
+- [x] **Step 3: Create the interface**
 
 `iko-host/Clients/IPlatformClient.cs`:
 ```csharp
@@ -132,22 +132,22 @@ public interface IPlatformClient
 }
 ```
 
-- [ ] **Step 4: Сборка НЕ обязана проходить** (потребители старых полей TrackModel чинятся в задачах 2–6; коммит после Task 6)
+- [x] **Step 4: Build is NOT required to pass yet** (consumers of the old TrackModel fields get fixed in Tasks 2–6; commit happens after Task 6)
 
 ---
 
-### Task 2: `SpotifyClient` реализует `IPlatformClient`
+### Task 2: `SpotifyClient` implements `IPlatformClient`
 
 **Files:**
 - Modify: `iko-host/Clients/SpotifyClient.cs`
 
-- [ ] **Step 1: Переписать класс**
+- [x] **Step 1: Rewrite the class**
 
-Изменения относительно текущего файла:
-- `public class SpotifyClient : IPlatformClient`, свойство `public Platform Platform => Platform.Spotify;`
-- Конструктор: `public SpotifyClient(HttpClient httpClient, ILogger<SpotifyClient> logger)` — поля `_httpClient`, `_logger`; убрать `new HttpClient()`.
-- Удалить метод `ParsePlaylist` (использовался только удаляемым `PlaylistController`).
-- `SearchForTrack`: вместо `SpotifyId = trackId, Matched = true` → `Platform = Platform.Spotify, PlatformTrackId = trackId`; добавить проверку статуса ответа:
+Changes relative to the current file:
+- `public class SpotifyClient : IPlatformClient`, property `public Platform Platform => Platform.Spotify;`
+- Constructor: `public SpotifyClient(HttpClient httpClient, ILogger<SpotifyClient> logger)` — fields `_httpClient`, `_logger`; drop `new HttpClient()`.
+- Delete `ParsePlaylist` (used only by the removed `PlaylistController`).
+- `SearchForTrack`: `SpotifyId = trackId, Matched = true` → `Platform = Platform.Spotify, PlatformTrackId = trackId`; add a response status check:
 ```csharp
 if (!trackResponse.IsSuccessStatusCode)
 {
@@ -156,7 +156,7 @@ if (!trackResponse.IsSuccessStatusCode)
     return null;
 }
 ```
-- Добавить методы, перенесённые из `LibraryController` (вместо `dynamic`-дублирования там), с проверкой статуса и `PlatformApiException`:
+- Add the methods moved from `LibraryController` (replacing the `dynamic` duplication there), with status checks and `PlatformApiException`:
 ```csharp
 public async Task<List<PlaylistSummary>> GetPlaylists(string accessToken)
 {
@@ -232,7 +232,7 @@ public async Task<List<LibraryTrack>> GetPlaylistTracks(string playlistId, strin
     return tracks;
 }
 ```
-- `CreatePlaylist`: сигнатура `(IEnumerable<string> trackIds, string accessToken, string? name = null)` (уже совпадает); пустой `catch` при получении обложки заменить:
+- `CreatePlaylist`: signature `(IEnumerable<string> trackIds, string accessToken, string? name = null)` (already matches); replace the empty cover-fetch `catch`:
 ```csharp
 catch (Exception ex)
 {
@@ -240,45 +240,45 @@ catch (Exception ex)
     return (playlistUrl, null);
 }
 ```
-а после `createResponse` добавить проверку:
+and add a check after `createResponse`:
 ```csharp
 if (!createResponse.IsSuccessStatusCode)
     throw new PlatformApiException(Platform.Spotify,
         "Failed to create Spotify playlist", (int)createResponse.StatusCode);
 ```
-- Остальные методы (`ObtainAccessToken`, `RefreshAccessToken`, `GetCurrentUser`, приватный `GetAccessToken`) — без изменений, кроме использования внедрённого `_httpClient`.
-- Добавить `using iko_host.Exceptions;` и `using Microsoft.Extensions.Logging;` (вторая обычно покрыта ImplicitUsings — добавлять только если сборка попросит).
+- The remaining methods (`ObtainAccessToken`, `RefreshAccessToken`, `GetCurrentUser`, private `GetAccessToken`) — unchanged except for using the injected `_httpClient`.
+- Add `using iko_host.Exceptions;` (and `using Microsoft.Extensions.Logging;` only if the build asks for it — ImplicitUsings usually covers it).
 
 ---
 
-### Task 3: `YouTubeClient` реализует `IPlatformClient`
+### Task 3: `YouTubeClient` implements `IPlatformClient`
 
 **Files:**
 - Modify: `iko-host/Clients/YouTubeClient.cs`
 
-- [ ] **Step 1: Переписать класс**
+- [ ] **Step 1: Rewrite the class**
 
 - `public class YouTubeClient : IPlatformClient`, `public Platform Platform => Platform.YouTube;`
-- Конструктор `(HttpClient httpClient, ILogger<YouTubeClient> logger)`.
-- Удалить `ParsePlaylist`.
-- `SearchForTrack`: `YouTubeVideoId = videoId, Matched = true` → `Platform = Platform.YouTube, PlatformTrackId = videoId`. Пустой `catch` вокруг получения длительности (строки 84–87) заменить на:
+- Constructor `(HttpClient httpClient, ILogger<YouTubeClient> logger)`.
+- Delete `ParsePlaylist`.
+- `SearchForTrack`: `YouTubeVideoId = videoId, Matched = true` → `Platform = Platform.YouTube, PlatformTrackId = videoId`. Replace the empty `catch` around the duration fetch (old lines 84–87) with:
 ```csharp
 catch (Exception ex)
 {
     _logger.LogWarning(ex, "Failed to fetch YouTube duration for video {VideoId}", videoId);
 }
 ```
-- `GetPlaylists`: тип результата `List<object>` → `List<PlaylistSummary>` (поля те же: `Id`, `Name`, `ImageUrl`, `TrackCount`); при `!response.IsSuccessStatusCode` → `throw new PlatformApiException(Platform.YouTube, "Failed to load YouTube playlists", (int)response.StatusCode);`
-- `GetPlaylistTracks`: `List<object>` → `List<LibraryTrack>` (поля: `PlatformTrackId = r.videoId`, `Name`, `Artist`, `ImageUrl`, `DurationMs`, `Platform = "YouTube"`); аналогичная проверка статуса.
-- `CreatePlaylist`: добавить проверку статуса `createResponse` → `PlatformApiException`.
-- `FetchDurations`: оба пустых `catch` заменить:
+- `GetPlaylists`: result type `List<object>` → `List<PlaylistSummary>` (same fields: `Id`, `Name`, `ImageUrl`, `TrackCount`); on `!response.IsSuccessStatusCode` → `throw new PlatformApiException(Platform.YouTube, "Failed to load YouTube playlists", (int)response.StatusCode);`
+- `GetPlaylistTracks`: `List<object>` → `List<LibraryTrack>` (fields: `PlatformTrackId = r.videoId`, `Name`, `Artist`, `ImageUrl`, `DurationMs`, `Platform = "YouTube"`); same status check.
+- `CreatePlaylist`: add a status check on `createResponse` → `PlatformApiException`.
+- `FetchDurations`: replace both empty `catch` blocks:
 ```csharp
-// внутренний (парсинг ISO-длительности)
+// inner (ISO duration parsing)
 catch (Exception ex)
 {
     _logger.LogWarning(ex, "Failed to parse YouTube duration {Iso} for video {VideoId}", iso, id);
 }
-// внешний (запрос батча)
+// outer (batch request)
 catch (Exception ex)
 {
     _logger.LogWarning(ex, "Failed to fetch YouTube durations batch starting at {Index}", i);
@@ -287,17 +287,17 @@ catch (Exception ex)
 
 ---
 
-### Task 4: `AppleMusicClient` реализует `IPlatformClient`
+### Task 4: `AppleMusicClient` implements `IPlatformClient`
 
 **Files:**
 - Modify: `iko-host/Clients/AppleMusicClient.cs`
 
-- [ ] **Step 1: Переписать класс**
+- [ ] **Step 1: Rewrite the class**
 
-- `public class AppleMusicClient : IPlatformClient`, `public Platform Platform => Models.Platform.AppleMusic;` (если имя свойства конфликтует с типом — использовать полное имя типа в свойстве).
-- Конструктор `(HttpClient httpClient, ILogger<AppleMusicClient> logger)`.
-- Удалить `ParsePlaylist`.
-- `SearchForTrack(string name, string artist, string? accessToken = null)`: в начале
+- `public class AppleMusicClient : IPlatformClient`, `public Platform Platform => Models.Platform.AppleMusic;` (use the fully-qualified type name if the property name clashes with the type).
+- Constructor `(HttpClient httpClient, ILogger<AppleMusicClient> logger)`.
+- Delete `ParsePlaylist`.
+- `SearchForTrack(string name, string artist, string? accessToken = null)`: at the top
 ```csharp
 if (string.IsNullOrEmpty(accessToken))
 {
@@ -305,10 +305,10 @@ if (string.IsNullOrEmpty(accessToken))
     return null;
 }
 ```
-далее как сейчас (заголовок `Music-User-Token` = accessToken); результат: `Platform = Models.Platform.AppleMusic, PlatformTrackId = songId`.
-- `GetPlaylists` → `List<PlaylistSummary>`, `GetPlaylistTracks` → `List<LibraryTrack>` (`Platform = "AppleMusic"`), с проверками статуса → `PlatformApiException`.
-- `CreatePlaylist`: проверка статуса → `PlatformApiException`.
-- `GetCurrentUser`: пустой `catch` → `catch (Exception ex) { _logger.LogWarning(ex, "Apple Music user check failed"); return ("", ""); }`
+then as before (the `Music-User-Token` header = accessToken); result: `Platform = Models.Platform.AppleMusic, PlatformTrackId = songId`.
+- `GetPlaylists` → `List<PlaylistSummary>`, `GetPlaylistTracks` → `List<LibraryTrack>` (`Platform = "AppleMusic"`), with status checks → `PlatformApiException`.
+- `CreatePlaylist`: status check → `PlatformApiException`.
+- `GetCurrentUser`: empty `catch` → `catch (Exception ex) { _logger.LogWarning(ex, "Apple Music user check failed"); return ("", ""); }`
 
 ---
 
@@ -316,9 +316,9 @@ if (string.IsNullOrEmpty(accessToken))
 
 **Files:**
 - Create: `iko-host/Clients/PlatformClientFactory.cs`
-- Modify: `iko-host/Program.cs` (только блок регистраций клиентов)
+- Modify: `iko-host/Program.cs` (client registration block only)
 
-- [ ] **Step 1: Создать фабрику**
+- [ ] **Step 1: Create the factory**
 
 ```csharp
 namespace iko_host.Clients;
@@ -341,15 +341,15 @@ public class PlatformClientFactory
 }
 ```
 
-- [ ] **Step 2: Обновить регистрации в Program.cs**
+- [ ] **Step 2: Update registrations in Program.cs**
 
-Заменить:
+Replace:
 ```csharp
 builder.Services.AddScoped<SpotifyClient>();
 builder.Services.AddScoped<YouTubeClient>();
 builder.Services.AddScoped<AppleMusicClient>();
 ```
-на:
+with:
 ```csharp
 builder.Services.AddHttpClient<SpotifyClient>();
 builder.Services.AddHttpClient<YouTubeClient>();
@@ -362,13 +362,13 @@ builder.Services.AddTransient<PlatformClientFactory>();
 
 ---
 
-### Task 6: Переписать `LibraryController` и `SearchController` через фабрику
+### Task 6: Rewrite `LibraryController` and `SearchController` via the factory
 
 **Files:**
-- Modify: `iko-host/Controllers/LibraryController.cs` (полная замена)
-- Modify: `iko-host/Controllers/SearchController.cs` (полная замена)
+- Modify: `iko-host/Controllers/LibraryController.cs` (full replacement)
+- Modify: `iko-host/Controllers/SearchController.cs` (full replacement)
 
-- [ ] **Step 1: Новый LibraryController**
+- [ ] **Step 1: New LibraryController**
 
 ```csharp
 using System.Security.Claims;
@@ -427,9 +427,9 @@ public class LibraryController : ControllerBase
     }
 }
 ```
-(`UnsupportedPlatformException` из фабрики обработает глобальный handler из Task 7 → 400.)
+(`UnsupportedPlatformException` thrown by the factory is mapped to 400 by the global handler from Task 7.)
 
-- [ ] **Step 2: Новый SearchController**
+- [ ] **Step 2: New SearchController**
 
 ```csharp
 using System.Security.Claims;
@@ -512,10 +512,10 @@ public class SearchController : ControllerBase
 }
 ```
 
-- [ ] **Step 3: Сборка**
+- [ ] **Step 3: Build**
 
 Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj`
-Expected: ошибки только в `PlaylistController.cs` (старые поля TrackModel) — он удаляется в Task 8. Если хочется зелёной сборки уже сейчас — допустимо перенести удаление `PlaylistController.cs` и `Models/PlaylistModels.cs` из Task 8 в этот шаг (тогда в Task 8 остаётся только Export и стабы).
+Expected: errors only in `PlaylistController.cs` (old TrackModel fields) — it is deleted in Task 8. If a green build is desired now, it is acceptable to pull the deletion of `PlaylistController.cs` and `Models/PlaylistModels.cs` forward from Task 8 into this step (Task 8 then keeps only Export and the stubs).
 
 - [ ] **Step 4: Commit**
 
@@ -526,18 +526,18 @@ git commit -m "refactor: introduce IPlatformClient with factory, deduplicate lib
 
 ---
 
-### Task 7: Serilog + глобальный exception handler + CORS
+### Task 7: Serilog + global exception handler + CORS
 
 **Files:**
 - Create: `iko-host/Infrastructure/GlobalExceptionHandler.cs`
 - Modify: `iko-host/Program.cs`
-- Modify: `iko-host/iko-host.csproj` (пакет)
-- Modify: `iko-host/.gitignore` или корневой `.gitignore` (добавить `logs/`)
+- Modify: `iko-host/iko-host.csproj` (package)
+- Modify: `.gitignore` (add `logs/`)
 
-- [ ] **Step 1: Установить пакет**
+- [ ] **Step 1: Install the package**
 
 Run: `dotnet add c:\awoq\iko\iko-host\iko-host.csproj package Serilog.AspNetCore`
-Expected: пакет добавлен в csproj.
+Expected: package added to the csproj.
 
 - [ ] **Step 2: GlobalExceptionHandler**
 
@@ -581,7 +581,7 @@ public class GlobalExceptionHandler : IExceptionHandler
 
 - [ ] **Step 3: Program.cs**
 
-В начало файла (после `DotNetEnv.Env.Load();`):
+At the top of the file (after `DotNetEnv.Env.Load();`):
 ```csharp
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -596,11 +596,11 @@ Log.Logger = new LoggerConfiguration()
 ```
 usings: `using Serilog;` `using Serilog.Events;` `using iko_host.Infrastructure;`
 
-После `var builder = ...`: `builder.Host.UseSerilog();`
+After `var builder = ...`: `builder.Host.UseSerilog();`
 
-Регистрация handler-а: `builder.Services.AddExceptionHandler<GlobalExceptionHandler>();`
+Handler registration: `builder.Services.AddExceptionHandler<GlobalExceptionHandler>();`
 
-Исправить CORS (убрать противоречие):
+Fix CORS (remove the contradiction):
 ```csharp
 builder.Services.AddCors(options =>
 {
@@ -613,12 +613,12 @@ builder.Services.AddCors(options =>
 });
 ```
 
-В пайплайн сразу после `var app = builder.Build();` блока EnsureCreated:
+In the pipeline, right after the `var app = builder.Build();` EnsureCreated block:
 ```csharp
 app.UseExceptionHandler(_ => { });
 app.UseSerilogRequestLogging();
 ```
-И обернуть `app.Run();`:
+And wrap `app.Run();`:
 ```csharp
 try
 {
@@ -630,11 +630,11 @@ finally
 }
 ```
 
-- [ ] **Step 4: gitignore + сборка + ручная проверка**
+- [ ] **Step 4: gitignore + build + manual check**
 
-Добавить `logs/` в `.gitignore`.
-Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` → Expected: Build succeeded (либо те же ожидаемые ошибки PlaylistController, если он ещё не удалён).
-Запустить хост, дернуть `GET /api/library/playlists/0` без токена → 401; убедиться, что в консоли структурные логи Serilog и появился файл `logs/iko-*.log`.
+Add `logs/` to `.gitignore`.
+Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` → Expected: Build succeeded (or the same expected PlaylistController errors if it has not been deleted yet).
+Start the host, hit `GET /api/library/playlists/0` without a token → 401; confirm structured Serilog output in the console and a `logs/iko-*.log` file.
 
 - [ ] **Step 5: Commit**
 
@@ -645,23 +645,23 @@ git commit -m "feat: serilog logging, global exception handler, fix CORS policy"
 
 ---
 
-### Task 8: Export-эндпоинт; удалить PlaylistController и стабы
+### Task 8: Export endpoint; delete PlaylistController and stubs
 
 **Files:**
 - Delete: `iko-host/Controllers/PlaylistController.cs`
 - Delete: `iko-host/Models/PlaylistModels.cs`
 - Modify: `iko-host/Controllers/IkoPlaylistsController.cs`
-- Modify: `iko-host/Controllers/AccountsController.cs` (удалить два стаба)
+- Modify: `iko-host/Controllers/AccountsController.cs` (delete the two stubs)
 
-- [ ] **Step 1: Удалить мёртвый код**
+- [ ] **Step 1: Delete dead code**
 
-Удалить `PlaylistController.cs` и `PlaylistModels.cs`. В `AccountsController.cs` удалить методы `ConnectSoundCloud` и `ConnectDeezer` (и комментарий `// --- Stubs ---`).
+Delete `PlaylistController.cs` and `PlaylistModels.cs`. In `AccountsController.cs` delete the `ConnectSoundCloud` and `ConnectDeezer` methods (and the `// --- Stubs ---` comment).
 
-- [ ] **Step 2: Export-эндпоинт**
+- [ ] **Step 2: Export endpoint**
 
-В `IkoPlaylistsController`: добавить в конструктор `PlatformClientFactory clients, ILogger<IkoPlaylistsController> logger` (поля `_clients`, `_logger`), `using iko_host.Clients;`.
+In `IkoPlaylistsController`: add `PlatformClientFactory clients, ILogger<IkoPlaylistsController> logger` to the constructor (fields `_clients`, `_logger`), `using iko_host.Clients;`.
 
-Новый метод:
+New method:
 ```csharp
 [HttpPost("{id:guid}/export")]
 public async Task<IActionResult> Export(Guid id, [FromBody] ExportPlaylistRequest request)
@@ -724,7 +724,7 @@ public async Task<IActionResult> Export(Guid id, [FromBody] ExportPlaylistReques
 }
 ```
 
-DTO (в конец файла, рядом с остальными request-классами):
+DTO (at the end of the file, next to the other request classes):
 ```csharp
 public class ExportPlaylistRequest
 {
@@ -732,7 +732,7 @@ public class ExportPlaylistRequest
 }
 ```
 
-- [ ] **Step 3: Сборка**
+- [ ] **Step 3: Build**
 
 Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj`
 Expected: Build succeeded, 0 errors.
@@ -746,38 +746,38 @@ git commit -m "feat: playlist export endpoint; remove convert backend and platfo
 
 ---
 
-### Task 9: Фронтенд — удалить /convert, зачистить SoundCloud/Deezer
+### Task 9: Frontend — remove /convert, clean up SoundCloud/Deezer
 
 **Files:**
-- Delete: `iko-web/src/app/home/` (вся папка)
+- Delete: `iko-web/src/app/home/` (entire folder)
 - Modify: `iko-web/src/app/app.routes.ts`
 - Modify: `iko-web/src/app/services/api.service.ts`
 - Modify: `iko-web/src/app/settings/settings.component.ts`, `.html`
 - Modify: `iko-web/src/app/platform-badge/platform-badge.component.ts`
 - Modify: `iko-web/src/app/playlist-editor/playlist-editor.component.ts`
 
-- [ ] **Step 1: Удалить /convert**
+- [ ] **Step 1: Remove /convert**
 
-Удалить папку `iko-web/src/app/home/`. В `app.routes.ts` убрать импорт `HomeComponent` и строку `{ path: 'convert', component: HomeComponent },`.
+Delete the `iko-web/src/app/home/` folder. In `app.routes.ts` remove the `HomeComponent` import and the `{ path: 'convert', component: HomeComponent },` line.
 
 - [ ] **Step 2: ApiService**
 
-Удалить методы `parsePlaylist`, `searchTracks`, `createExternalPlaylist` (и комментарий `// Playlist conversion`). В `platformIndex` убрать `soundcloud: 3, deezer: 4`.
+Delete the `parsePlaylist`, `searchTracks`, `createExternalPlaylist` methods (and the `// Playlist conversion` comment). In `platformIndex` remove `soundcloud: 3, deezer: 4`.
 
 - [ ] **Step 3: Settings**
 
-В `settings.component.ts`: удалить поле `stub` из `PlatformConfig`, убрать записи soundcloud/deezer из `platforms`, убрать `if (platform.stub) return;` в `connect()`. В `settings.component.html`: убрать блок `@if (p.stub) { <span hlmBadge ...>Coming Soon</span> } @else if` → начать с `@if (isConnected(p.id))`.
+In `settings.component.ts`: delete the `stub` field from `PlatformConfig`, remove the soundcloud/deezer entries from `platforms`, remove `if (platform.stub) return;` in `connect()`. In `settings.component.html`: remove the `@if (p.stub) { <span hlmBadge ...>Coming Soon</span> } @else if` block → start with `@if (isConnected(p.id))`.
 
-- [ ] **Step 4: platform-badge и playlist-editor**
+- [ ] **Step 4: platform-badge and playlist-editor**
 
-`platform-badge.component.ts`: удалить упоминания SoundCloud/Deezer (метод-проверку со списком `['SoundCloud', 'Deezer', ...]`, цвета `soundcloud`/`deezer`, ветки `case 'soundcloud'`/`case 'deezer'` и связанный с ними вывод в шаблоне, если он есть).
+`platform-badge.component.ts`: remove SoundCloud/Deezer references (the check method with the `['SoundCloud', 'Deezer', ...]` list, the `soundcloud`/`deezer` colors, the `case 'soundcloud'`/`case 'deezer'` branches and any related template output).
 
 `playlist-editor.component.ts`: `platformName` → `return ['Spotify', 'YouTube', 'AppleMusic'][index] || '';`
 
-- [ ] **Step 5: Сборка + Commit**
+- [ ] **Step 5: Build + Commit**
 
-Run: `npx ng build` (из `iko-web`)
-Expected: успешная сборка.
+Run: `npx ng build` (from `iko-web`)
+Expected: build succeeds.
 
 ```bash
 git add -A iko-web
@@ -786,7 +786,7 @@ git commit -m "refactor: remove convert page and SoundCloud/Deezer stubs from fr
 
 ---
 
-### Task 10: Типизация фронтенда (`models.ts`)
+### Task 10: Frontend typing (`models.ts`)
 
 **Files:**
 - Create: `iko-web/src/app/models.ts`
@@ -794,9 +794,9 @@ git commit -m "refactor: remove convert page and SoundCloud/Deezer stubs from fr
 - Modify: `iko-web/src/app/playlist-editor/playlist-editor.component.ts`
 - Modify: `iko-web/src/app/library/library.component.ts`
 - Modify: `iko-web/src/app/settings/settings.component.ts`
-- Modify: `iko-web/src/app/services/auth.service.ts`, `player.service.ts` (по месту, где есть `any`)
+- Modify: `iko-web/src/app/services/auth.service.ts`, `player.service.ts` (wherever `any` occurs)
 
-- [ ] **Step 1: Создать models.ts**
+- [ ] **Step 1: Create models.ts**
 
 ```typescript
 export interface ApiResponse<T> {
@@ -804,7 +804,7 @@ export interface ApiResponse<T> {
   error: string | null;
 }
 
-/** Индекс платформы соответствует enum Platform на бэкенде. */
+/** Platform index matches the backend Platform enum. */
 export type PlatformIndex = 0 | 1 | 2; // Spotify | YouTube | AppleMusic
 export type PlatformName = 'Spotify' | 'YouTube' | 'AppleMusic';
 
@@ -890,9 +890,9 @@ export interface AddTrackBody {
 }
 ```
 
-- [ ] **Step 2: Типизировать ApiService**
+- [ ] **Step 2: Type ApiService**
 
-Каждый метод получает конкретный возвращаемый тип, например:
+Every method gets a concrete return type, e.g.:
 ```typescript
 getIkoPlaylists(): Observable<ApiResponse<IkoPlaylistSummary[]>> {
   return this.http.get<ApiResponse<IkoPlaylistSummary[]>>(`${API_URL}/iko-playlists`);
@@ -905,15 +905,15 @@ getLibraryPlaylistTracks(platform: string, playlistId: string): Observable<ApiRe
 searchAllPlatforms(query: string, platforms?: string): Observable<ApiResponse<SearchResults>> { ... }
 getConnectedAccounts(): Observable<ApiResponse<ConnectedAccount[]>> { ... }
 ```
-По этому образцу — все методы сервиса.
+Apply this pattern to every method in the service.
 
-- [ ] **Step 3: Убрать `any` в компонентах**
+- [ ] **Step 3: Eliminate `any` in components**
 
-В `playlist-editor.component.ts`: `playlist: IkoPlaylistDetail | null`, `tracks: IkoPlaylistTrack[]`, `searchResults: SearchResults`, `sourcePlaylists: LibraryPlaylist[]`, `sourcePlaylistTracks: LibraryTrack[]`, `addTrack(track: SearchTrack | LibraryTrack, platform?: string)`, `playTrack(track: IkoPlaylistTrack)`, `toIkoTrack(t: IkoPlaylistTrack)`, `onDrop(event: CdkDragDrop<IkoPlaylistTrack[]>)`. Аналогично пройтись по `library.component.ts`, `settings.component.ts` (`connectedAccounts: ConnectedAccount[]`), `auth.service.ts`, `player.service.ts` — заменить `any` на типы из `models.ts`. Цель: `grep -rn ": any" iko-web/src/app --include="*.ts"` не находит ничего, кроме осознанных мест (SDK сторонних плееров — там допустимо оставить с комментарием).
+In `playlist-editor.component.ts`: `playlist: IkoPlaylistDetail | null`, `tracks: IkoPlaylistTrack[]`, `searchResults: SearchResults`, `sourcePlaylists: LibraryPlaylist[]`, `sourcePlaylistTracks: LibraryTrack[]`, `addTrack(track: SearchTrack | LibraryTrack, platform?: string)`, `playTrack(track: IkoPlaylistTrack)`, `toIkoTrack(t: IkoPlaylistTrack)`, `onDrop(event: CdkDragDrop<IkoPlaylistTrack[]>)`. Do the same pass over `library.component.ts`, `settings.component.ts` (`connectedAccounts: ConnectedAccount[]`), `auth.service.ts`, `player.service.ts` — replace `any` with types from `models.ts`. Goal: `grep -rn ": any" iko-web/src/app --include="*.ts"` finds nothing except deliberate spots (third-party player SDK typings — acceptable there, with a comment).
 
-- [ ] **Step 4: Сборка + Commit**
+- [ ] **Step 4: Build + Commit**
 
-Run: `npx ng build` → Expected: успех.
+Run: `npx ng build` → Expected: success.
 
 ```bash
 git add -A iko-web
@@ -922,14 +922,14 @@ git commit -m "refactor: typed API models, eliminate any in services and compone
 
 ---
 
-### Task 11: Export UI в редакторе плейлиста
+### Task 11: Export UI in the playlist editor
 
 **Files:**
 - Modify: `iko-web/src/app/services/api.service.ts`
 - Modify: `iko-web/src/app/playlist-editor/playlist-editor.component.ts`
 - Modify: `iko-web/src/app/playlist-editor/playlist-editor.component.html`
 
-- [ ] **Step 1: Метод в ApiService**
+- [ ] **Step 1: ApiService method**
 
 ```typescript
 exportIkoPlaylist(playlistId: string, platform: string): Observable<ApiResponse<ExportResult>> {
@@ -940,9 +940,9 @@ exportIkoPlaylist(playlistId: string, platform: string): Observable<ApiResponse<
 }
 ```
 
-- [ ] **Step 2: Логика в компоненте**
+- [ ] **Step 2: Component logic**
 
-Заменить `exportStub()` на:
+Replace `exportStub()` with:
 ```typescript
 exporting = false;
 exportResult: ExportResult | null = null;
@@ -951,7 +951,7 @@ exportTo(platform: string, platformLabel: string): void {
   if (this.exporting) return;
   this.exporting = true;
   this.exportResult = null;
-  // getAccountToken обновляет протухший access token на сервере перед экспортом
+  // getAccountToken refreshes a stale access token server-side before exporting
   this.api.getAccountToken(platform).subscribe({
     next: () => {
       this.api.exportIkoPlaylist(this.playlistId, platform).subscribe({
@@ -973,11 +973,11 @@ exportTo(platform: string, platformLabel: string): void {
   });
 }
 ```
-(импортировать `ExportResult` из `../models`).
+(import `ExportResult` from `../models`).
 
-- [ ] **Step 3: Шаблон**
+- [ ] **Step 3: Template**
 
-Дропдаун Export (строки ~206–213) заменить на:
+Replace the Export dropdown (around old lines 206–213) with:
 ```html
 <button hlmBtn variant="outline" [disabled]="exporting" [hlmDropdownMenuTrigger]="exportMenu">
   {{ exporting ? 'Exporting…' : 'Export' }}
@@ -990,7 +990,7 @@ exportTo(platform: string, platformLabel: string): void {
   </div>
 </ng-template>
 ```
-Ниже (после блока с кнопками, в подходящем месте карточки плейлиста) — панель результата:
+Below (after the button block, in a suitable spot in the playlist card) — the result panel:
 ```html
 @if (exportResult) {
   <div class="mt-4 rounded-lg border bg-card p-4 text-sm">
@@ -1011,9 +1011,9 @@ exportTo(platform: string, platformLabel: string): void {
 }
 ```
 
-- [ ] **Step 4: Сборка + ручная проверка + Commit**
+- [ ] **Step 4: Build + manual check + Commit**
 
-Run: `npx ng build` → успех. Ручная проверка: запустить хост и фронт, экспортировать IKO-плейлист в подключённую платформу, убедиться, что плейлист появился и панель результата показывает ссылку.
+Run: `npx ng build` → success. Manual check: run the host and the frontend, export an IKO playlist to a connected platform, confirm the playlist appears and the result panel shows the link.
 
 ```bash
 git add -A iko-web
@@ -1022,15 +1022,15 @@ git commit -m "feat: export iko playlist to connected platform from editor"
 
 ---
 
-### Task 12: DataAnnotations на DTO бэкенда
+### Task 12: DataAnnotations on backend DTOs
 
 **Files:**
 - Modify: `iko-host/Models/AuthModels.cs`
-- Modify: `iko-host/Controllers/IkoPlaylistsController.cs` (request-классы)
+- Modify: `iko-host/Controllers/IkoPlaylistsController.cs` (request classes)
 - Modify: `iko-host/Controllers/AccountsController.cs` (`AppleMusicTokenRequest`)
-- Modify: `iko-host/Controllers/AuthController.cs` (убрать ручные проверки-дубликаты, если есть)
+- Modify: `iko-host/Controllers/AuthController.cs` (drop duplicated manual checks, if any)
 
-- [ ] **Step 1: Атрибуты**
+- [ ] **Step 1: Attributes**
 
 `AuthModels.cs`:
 ```csharp
@@ -1057,7 +1057,7 @@ public class LoginRequest
 }
 ```
 
-Request-классы `IkoPlaylistsController.cs`:
+Request classes in `IkoPlaylistsController.cs`:
 ```csharp
 public class CreateIkoPlaylistRequest
 {
@@ -1088,17 +1088,17 @@ public class AddTrackRequest
     public int DurationMs { get; set; }
 }
 ```
-(`using System.ComponentModel.DataAnnotations;` вверху файла.)
+(`using System.ComponentModel.DataAnnotations;` at the top of the file.)
 
-`AppleMusicTokenRequest`: `[Required]` на `UserToken`.
+`AppleMusicTokenRequest`: `[Required]` on `UserToken`.
 
-В `AuthController` проверить и удалить ручные проверки, которые теперь покрыты атрибутами (пустые email/пароль); проверки уникальности email и корректности пароля при логине остаются.
+In `AuthController` check for and remove manual checks now covered by attributes (empty email/password); keep email-uniqueness and login password verification.
 
-Примечание: автоматический 400 от `[ApiController]` имеет формат ValidationProblemDetails (не `{data,error}`); фронтенд в этом случае покажет общий fallback-текст тоста — приемлемо.
+Note: the automatic 400 from `[ApiController]` uses the ValidationProblemDetails shape (not `{data,error}`); the frontend falls back to a generic toast message in that case — acceptable.
 
-- [ ] **Step 2: Сборка + Commit**
+- [ ] **Step 2: Build + Commit**
 
-Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` → успех.
+Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` → success.
 
 ```bash
 git add -A iko-host
@@ -1107,29 +1107,29 @@ git commit -m "feat: request validation via data annotations"
 
 ---
 
-### Task 13: EF-миграции вместо EnsureCreated
+### Task 13: EF migrations instead of EnsureCreated
 
 **Files:**
-- Create: `iko-host/Migrations/*` (генерируется)
+- Create: `iko-host/Migrations/*` (generated)
 - Modify: `iko-host/Program.cs`
-- Delete: `iko-host/iko.db` (пересоздание одобрено пользователем)
+- Delete: `iko-host/iko.db` (recreation approved by the user)
 
-- [ ] **Step 1: Установить dotnet-ef (если нет)**
+- [ ] **Step 1: Install dotnet-ef (if missing)**
 
-Run: `dotnet ef --version`; если команда не найдена: `dotnet tool install --global dotnet-ef`
+Run: `dotnet ef --version`; if the command is missing: `dotnet tool install --global dotnet-ef`
 
-- [ ] **Step 2: Сгенерировать миграцию**
+- [ ] **Step 2: Generate the migration**
 
-Run (из `c:\awoq\iko\iko-host`): `dotnet ef migrations add InitialCreate`
-Expected: папка `Migrations/` с `*_InitialCreate.cs` и snapshot.
+Run (from `c:\awoq\iko\iko-host`): `dotnet ef migrations add InitialCreate`
+Expected: a `Migrations/` folder with `*_InitialCreate.cs` and a snapshot.
 
 - [ ] **Step 3: Program.cs**
 
-Заменить `db.Database.EnsureCreated();` на `db.Database.Migrate();`
+Replace `db.Database.EnsureCreated();` with `db.Database.Migrate();`
 
-- [ ] **Step 4: Пересоздать БД**
+- [ ] **Step 4: Recreate the DB**
 
-Удалить `iko-host/iko.db` (и `iko.db-shm`/`iko.db-wal`, если есть). Запустить хост: `dotnet run` → Expected: в логах создание таблиц, файл `iko.db` появился, `GET /api/auth`-флоу работает (регистрация нового пользователя через UI).
+Delete `iko-host/iko.db` (and `iko.db-shm`/`iko.db-wal` if present). Start the host: `dotnet run` → Expected: table creation in the logs, `iko.db` recreated, the auth flow works (register a new user through the UI).
 
 - [ ] **Step 5: Commit**
 
@@ -1140,17 +1140,17 @@ git commit -m "feat: EF Core migrations instead of EnsureCreated"
 
 ---
 
-### Task 14: Финальная верификация
+### Task 14: Final verification
 
-- [ ] **Step 1: Полная сборка**
+- [ ] **Step 1: Full build**
 
-Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` и `npx ng build` (из iko-web) → оба успешны.
+Run: `dotnet build c:\awoq\iko\iko-host\iko-host.csproj` and `npx ng build` (from iko-web) → both succeed.
 
-- [ ] **Step 2: Smoke-тест вручную**
+- [ ] **Step 2: Manual smoke test**
 
-Запустить бэкенд + `npm start` (iko-web). Проверить: регистрация → логин → подключение Spotify/YouTube в Settings → библиотека платформы открывается → создание IKO-плейлиста → добавление треков из поиска и из библиотеки → drag-drop → Export в подключённую платформу → плеер играет трек. Убедиться, что `logs/iko-*.log` пишется и не содержит ERROR при штатной работе.
+Start the backend + `npm start` (iko-web). Verify: register → login → connect Spotify/YouTube in Settings → platform library opens → create an IKO playlist → add tracks from search and from the library → drag-drop → Export to a connected platform → the player plays a track. Confirm `logs/iko-*.log` is written and contains no ERROR entries during normal operation.
 
-- [ ] **Step 3: Зачистка `: any`**
+- [ ] **Step 3: `: any` sweep**
 
 Run: `grep -rn ": any" iko-web/src/app --include="*.ts"`
-Expected: только осознанные места (типизация SDK сторонних плееров), каждое с понятным контекстом.
+Expected: only deliberate spots (third-party player SDK typings), each with clear context.
