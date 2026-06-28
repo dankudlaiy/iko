@@ -247,7 +247,14 @@ public class SpotifyClient : IPlatformClient
         var response = await _httpClient.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
 
-        dynamic obj = JsonConvert.DeserializeObject(content)!;
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Spotify /me failed: HTTP {Status}", (int)response.StatusCode);
+            return ("", "");
+        }
+
+        dynamic? obj = JsonConvert.DeserializeObject(content);
+        if (obj?.id == null) return ("", "");
         return (obj.id.ToString(), obj.display_name?.ToString() ?? "");
     }
 

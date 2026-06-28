@@ -190,7 +190,7 @@ public class AccountsController : ControllerBase
     {
         var tokenResponse = await _spotifyClient.ObtainAccessToken(code, CallbackUri("spotify"));
 
-        if (tokenResponse == null)
+        if (string.IsNullOrEmpty(tokenResponse?.access_token))
             return Redirect($"{WebBase}/settings?error=spotify_auth_failed");
 
         if (!string.IsNullOrEmpty(state))
