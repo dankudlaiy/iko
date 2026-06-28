@@ -38,6 +38,10 @@ public class AccountsController : ControllerBase
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    private string ApiBase => _config["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://127.0.0.1:5000";
+    private string WebBase => _config["App:WebBaseUrl"]?.TrimEnd('/') ?? "http://localhost:4200";
+    private string CallbackUri(string platform) => $"{ApiBase}/api/accounts/callback/{platform}";
+
     [HttpGet]
     public async Task<IActionResult> ListAccounts()
     {
@@ -168,7 +172,7 @@ public class AccountsController : ControllerBase
     {
         var clientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID") ?? "";
         var scopes = "user-read-private user-read-email playlist-modify-public playlist-modify-private streaming user-read-playback-state user-modify-playback-state";
-        var redirectUri = SpotifyClient.RedirectUri;
+        var redirectUri = CallbackUri("spotify");
 
         var jwt = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
 
@@ -184,10 +188,10 @@ public class AccountsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> CallbackSpotify([FromQuery] string code, [FromQuery] string? state)
     {
-        var tokenResponse = await _spotifyClient.ObtainAccessToken(code);
+        var tokenResponse = await _spotifyClient.ObtainAccessToken(code, CallbackUri("spotify"));
 
         if (tokenResponse == null)
-            return Redirect("http://localhost:4200/settings?error=spotify_auth_failed");
+            return Redirect($"{WebBase}/settings?error=spotify_auth_failed");
 
         if (!string.IsNullOrEmpty(state))
         {
@@ -226,7 +230,7 @@ public class AccountsController : ControllerBase
             }
         }
 
-        return Redirect("http://localhost:4200/settings?connected=spotify");
+        return Redirect($"{WebBase}/settings?connected=spotify");
     }
 
     // --- YouTube ---
@@ -241,7 +245,7 @@ public class AccountsController : ControllerBase
         var jwt = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
 
         var url = $"https://accounts.google.com/o/oauth2/v2/auth?client_id={clientId}" +
-                  $"&response_type=code&redirect_uri={Uri.EscapeDataString(YouTubeClient.RedirectUri)}" +
+                  $"&response_type=code&redirect_uri={Uri.EscapeDataString(CallbackUri("youtube"))}" +
                   $"&scope={Uri.EscapeDataString(scopes)}" +
                   $"&access_type=offline&prompt=consent" +
                   $"&state={Uri.EscapeDataString(jwt)}";
@@ -253,10 +257,10 @@ public class AccountsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> CallbackYouTube([FromQuery] string code, [FromQuery] string? state)
     {
-        var tokenResponse = await _youTubeClient.ObtainAccessToken(code);
+        var tokenResponse = await _youTubeClient.ObtainAccessToken(code, CallbackUri("youtube"));
 
         if (tokenResponse?.access_token == null)
-            return Redirect("http://localhost:4200/settings?error=youtube_auth_failed");
+            return Redirect($"{WebBase}/settings?error=youtube_auth_failed");
 
         if (!string.IsNullOrEmpty(state))
         {
@@ -295,7 +299,7 @@ public class AccountsController : ControllerBase
             }
         }
 
-        return Redirect("http://localhost:4200/settings?connected=youtube");
+        return Redirect($"{WebBase}/settings?connected=youtube");
     }
 
     // --- Apple Music ---

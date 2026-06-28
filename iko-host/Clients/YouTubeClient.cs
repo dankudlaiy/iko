@@ -6,8 +6,6 @@ using Newtonsoft.Json;
 
 public class YouTubeClient : IPlatformClient
 {
-    public const string RedirectUri = "http://127.0.0.1:5000/api/accounts/callback/youtube";
-
     private readonly HttpClient _httpClient;
     private readonly ILogger<YouTubeClient> _logger;
 
@@ -171,14 +169,14 @@ public class YouTubeClient : IPlatformClient
         return (playlistUrl, imageUrl);
     }
 
-    public async Task<OAuthTokenResponse?> ObtainAccessToken(string code)
+    public async Task<OAuthTokenResponse?> ObtainAccessToken(string code, string redirectUri)
     {
         var tokenRequest = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("code", code),
             new KeyValuePair<string, string>("client_id", _clientId),
             new KeyValuePair<string, string>("client_secret", _clientSecret),
-            new KeyValuePair<string, string>("redirect_uri", RedirectUri),
+            new KeyValuePair<string, string>("redirect_uri", redirectUri),
             new KeyValuePair<string, string>("grant_type", "authorization_code")
         });
 

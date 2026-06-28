@@ -9,8 +9,6 @@ using Newtonsoft.Json.Linq;
 
 public class SpotifyClient : IPlatformClient
 {
-    public const string RedirectUri = "http://127.0.0.1:5000/api/accounts/callback/spotify";
-
     private readonly HttpClient _httpClient;
     private readonly ILogger<SpotifyClient> _logger;
 
@@ -209,14 +207,14 @@ public class SpotifyClient : IPlatformClient
         }
     }
 
-    public async Task<SpotifyTokenResponse?> ObtainAccessToken(string authToken)
+    public async Task<SpotifyTokenResponse?> ObtainAccessToken(string authToken, string redirectUri)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://accounts.spotify.com/api/token");
 
         var base64Authorization = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_clientId}:{_clientSecret}"));
         request.Headers.TryAddWithoutValidation("Authorization", $"Basic {base64Authorization}");
 
-        request.Content = new StringContent($"grant_type=authorization_code&code={authToken}&redirect_uri={Uri.EscapeDataString(RedirectUri)}");
+        request.Content = new StringContent($"grant_type=authorization_code&code={authToken}&redirect_uri={Uri.EscapeDataString(redirectUri)}");
         request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/x-www-form-urlencoded");
 
         var response = await _httpClient.SendAsync(request);
