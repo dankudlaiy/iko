@@ -108,6 +108,20 @@ docker run --env-file iko-host/.env -p 5000:8080 iko-host
 
 The frontend is built separately (`npm run build` in `iko-web`) and can be served by any static file server.
 
+## Deployment
+
+The live instance runs a native deploy on Ubuntu (Kestrel behind nginx, managed by a
+`systemd` unit, TLS via Let's Encrypt). To ship a new build:
+
+```bash
+./deploy.sh
+```
+
+It builds the backend and frontend locally, uploads the artifacts over the `awqserver`
+SSH alias, restarts the `iko-api` service and runs a smoke test. It never touches the
+server `.env` (which holds `Jwt__Key`, `App__*` and platform secrets) or the API
+directory's runtime data (`iko.db`, logs, uploaded covers).
+
 ## Testing
 
 ```bash
