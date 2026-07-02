@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -23,7 +24,7 @@ import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.compone
 @Component({
     selector: 'app-playlist-editor',
     imports: [
-        FormsModule, DragDropModule, NgIcon, HlmIcon, HlmButton, HlmInput, HlmSkeleton,
+        FormsModule, NgClass, DragDropModule, NgIcon, HlmIcon, HlmButton, HlmInput, HlmSkeleton,
         ...HlmDropdownMenuImports, PlatformBadgeComponent, PlaylistCoverComponent
     ],
     viewProviders: [provideIcons({
@@ -258,6 +259,15 @@ export class PlaylistEditorComponent implements OnInit {
 
   isTrackInPlaylist(platformTrackId: string): boolean {
     return this.tracks.some(t => t.platformTrackId === platformTrackId);
+  }
+
+  /** True when this row is the track currently loaded in the player (by identity,
+   *  so it works whether playback started from "Play All", a row tap, or elsewhere). */
+  isCurrentTrack(track: IkoPlaylistTrack): boolean {
+    const cur = this.player.currentTrack;
+    return !!cur
+      && cur.platformTrackId === track.platformTrackId
+      && cur.platform === this.platformName(track.platform);
   }
 
   removeTrack(trackId: string): void {

@@ -249,9 +249,28 @@
 
       <div class="flex flex-col gap-1" cdkDropList (cdkDropListDropped)="onDrop($event)">
         @for (track of tracks; track track.id; let i = $index) {
-          <div class="flex items-center gap-2 rounded-xl p-2 transition-all duration-200 hover:bg-accent hover:shadow-md" cdkDrag (click)="playTrack(track)">
+          <div
+            class="flex items-center gap-2 rounded-xl p-2 transition-all duration-200 hover:bg-accent hover:shadow-md"
+            [ngClass]="isCurrentTrack(track) ? 'bg-play/10 ring-1 ring-inset ring-play/30' : ''"
+            cdkDrag
+            (click)="playTrack(track)"
+          >
             <ng-icon hlm name="lucideGripVertical" cdkDragHandle class="cursor-grab text-muted-foreground" />
-            <span class="w-5 shrink-0 text-center text-xs text-muted-foreground">{{ i + 1 }}</span>
+            @if (isCurrentTrack(track)) {
+              @if (player.state.isPlaying) {
+                <span class="flex h-4 w-5 shrink-0 items-end justify-center gap-[2px]" aria-label="Now playing">
+                  <span class="eq-bar h-full"></span>
+                  <span class="eq-bar h-full"></span>
+                  <span class="eq-bar h-full"></span>
+                </span>
+              } @else {
+                <span class="flex w-5 shrink-0 justify-center text-play">
+                  <ng-icon hlm name="lucidePlay" class="text-xs" />
+                </span>
+              }
+            } @else {
+              <span class="w-5 shrink-0 text-center text-xs text-muted-foreground">{{ i + 1 }}</span>
+            }
             @if (track.imageUrl) {
               <img [src]="track.imageUrl" alt="" class="size-10 shrink-0 rounded object-cover" />
             } @else {
@@ -260,7 +279,7 @@
               </div>
             }
             <div class="flex min-w-0 flex-1 flex-col">
-              <span class="truncate text-sm font-medium">{{ track.name }}</span>
+              <span class="truncate text-sm font-medium" [class.text-play]="isCurrentTrack(track)">{{ track.name }}</span>
               <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
             </div>
             <app-platform-badge [platform]="platformName(track.platform)" size="sm" />
