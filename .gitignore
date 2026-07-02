@@ -10,3 +10,4 @@ riderModule.iml
 logs/
 *.pem
 *.key
+deploy-publish/

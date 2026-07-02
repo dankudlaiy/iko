@@ -122,6 +122,9 @@ SSH alias, restarts the `iko-api` service and runs a smoke test. It never touche
 server `.env` (which holds `Jwt__Key`, `App__*` and platform secrets) or the API
 directory's runtime data (`iko.db`, logs, uploaded covers).
 
+Full server layout, SSH setup for a new machine, secrets, TLS and common ops are
+documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Testing
 
 ```bash
