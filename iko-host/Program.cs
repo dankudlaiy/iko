@@ -79,6 +79,7 @@ builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<YouTu
 builder.Services.AddTransient<IPlatformClient>(sp => sp.GetRequiredService<AppleMusicClient>());
 builder.Services.AddTransient<PlatformClientFactory>();
 builder.Services.AddTransient<PlaylistExportService>();
+builder.Services.AddScoped<AccountTokenService>();
 
 var app = builder.Build();
 

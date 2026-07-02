@@ -4,6 +4,7 @@ using System.Text;
 using iko_host.Clients;
 using iko_host.Data;
 using iko_host.Models;
+using iko_host.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,19 +22,22 @@ public class AccountsController : ControllerBase
     private readonly YouTubeClient _youTubeClient;
     private readonly AppleMusicClient _appleMusicClient;
     private readonly IConfiguration _config;
+    private readonly AccountTokenService _tokens;
 
     public AccountsController(
         AppDbContext db,
         SpotifyClient spotifyClient,
         YouTubeClient youTubeClient,
         AppleMusicClient appleMusicClient,
-        IConfiguration config)
+        IConfiguration config,
+        AccountTokenService tokens)
     {
         _db = db;
         _spotifyClient = spotifyClient;
         _youTubeClient = youTubeClient;
         _appleMusicClient = appleMusicClient;
         _config = config;
+        _tokens = tokens;
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -86,38 +90,9 @@ public class AccountsController : ControllerBase
         if (account == null)
             return NotFound(new { data = (object?)null, error = "Account not connected" });
 
-        if (account.ExpiresAt.HasValue && account.ExpiresAt.Value <= DateTime.UtcNow
-            && !string.IsNullOrEmpty(account.RefreshToken))
-        {
-            switch (platform)
-            {
-                case Platform.Spotify:
-                    var spotifyRefreshed = await _spotifyClient.RefreshAccessToken(account.RefreshToken);
-                    if (spotifyRefreshed != null)
-                    {
-                        account.AccessToken = spotifyRefreshed.access_token;
-                        account.ExpiresAt = DateTime.UtcNow.AddSeconds(spotifyRefreshed.expires_in);
-                        if (!string.IsNullOrEmpty(spotifyRefreshed.refresh_token))
-                            account.RefreshToken = spotifyRefreshed.refresh_token;
-                        await _db.SaveChangesAsync();
-                    }
-                    break;
+        var accessToken = await _tokens.GetValidAccessTokenAsync(account);
 
-                case Platform.YouTube:
-                    var ytRefreshed = await _youTubeClient.RefreshAccessToken(account.RefreshToken);
-                    if (ytRefreshed != null)
-                    {
-                        account.AccessToken = ytRefreshed.access_token;
-                        account.ExpiresAt = DateTime.UtcNow.AddSeconds(ytRefreshed.expires_in);
-                        if (!string.IsNullOrEmpty(ytRefreshed.refresh_token))
-                            account.RefreshToken = ytRefreshed.refresh_token;
-                        await _db.SaveChangesAsync();
-                    }
-                    break;
-            }
-        }
-
-        return Ok(new { data = new { accessToken = account.AccessToken }, error = (string?)null });
+        return Ok(new { data = new { accessToken }, error = (string?)null });
     }
 
     [HttpGet("refresh/{platform}")]

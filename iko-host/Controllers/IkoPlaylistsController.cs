@@ -17,6 +17,7 @@ public class IkoPlaylistsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
     private readonly PlaylistExportService _exportService;
+    private readonly AccountTokenService _tokens;
 
     private static readonly Dictionary<string, string> AllowedImageTypes = new()
     {
@@ -29,11 +30,13 @@ public class IkoPlaylistsController : ControllerBase
     public IkoPlaylistsController(
         AppDbContext db,
         IWebHostEnvironment env,
-        PlaylistExportService exportService)
+        PlaylistExportService exportService,
+        AccountTokenService tokens)
     {
         _db = db;
         _env = env;
         _exportService = exportService;
+        _tokens = tokens;
     }
 
     private string CoversDir => Path.Combine(
@@ -304,8 +307,9 @@ public class IkoPlaylistsController : ControllerBase
         if (account == null)
             return BadRequest(new { data = (object?)null, error = $"{request.TargetPlatform} is not connected" });
 
+        var token = await _tokens.GetValidAccessTokenAsync(account);
         var outcome = await _exportService.ExportAsync(
-            playlist.Tracks.ToList(), playlist.Name, request.TargetPlatform, account.AccessToken);
+            playlist.Tracks.ToList(), playlist.Name, request.TargetPlatform, token);
 
         if (outcome == null)
             return BadRequest(new { data = (object?)null, error = "No tracks could be matched on the target platform" });

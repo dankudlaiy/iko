@@ -2,6 +2,7 @@ using System.Security.Claims;
 using iko_host.Clients;
 using iko_host.Data;
 using iko_host.Models;
+using iko_host.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,12 +16,15 @@ public class SearchController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly PlatformClientFactory _clients;
+    private readonly AccountTokenService _tokens;
     private readonly ILogger<SearchController> _logger;
 
-    public SearchController(AppDbContext db, PlatformClientFactory clients, ILogger<SearchController> logger)
+    public SearchController(
+        AppDbContext db, PlatformClientFactory clients, AccountTokenService tokens, ILogger<SearchController> logger)
     {
         _db = db;
         _clients = clients;
+        _tokens = tokens;
         _logger = logger;
     }
 
@@ -41,7 +45,12 @@ public class SearchController : ControllerBase
         var userId = GetUserId();
         var accounts = await _db.ConnectedAccounts
             .Where(ca => ca.UserId == userId && requested.Contains(ca.Platform))
-            .ToDictionaryAsync(ca => ca.Platform, ca => ca.AccessToken);
+            .ToListAsync();
+
+        // Refresh tokens sequentially before the parallel search: DbContext is not thread-safe.
+        var tokens = new Dictionary<Platform, string>();
+        foreach (var account in accounts)
+            tokens[account.Platform] = await _tokens.GetValidAccessTokenAsync(account);
 
         var results = new Dictionary<string, List<object>>();
 
@@ -50,7 +59,7 @@ public class SearchController : ControllerBase
             var found = new List<object>();
             try
             {
-                var token = accounts.GetValueOrDefault(platform);
+                var token = tokens.GetValueOrDefault(platform);
                 var track = await _clients.Get(platform).SearchForTrack(q, "", token);
                 if (track?.PlatformTrackId != null)
                 {
