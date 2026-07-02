@@ -368,10 +368,11 @@ export class PlayerService {
     if (!container) {
       container = document.createElement('div');
       container.id = 'yt-player-container';
-      // Visible small floating player: mobile browsers refuse to play hidden/zero-size video.
+      // Rendered off-screen: the iframe must stay a real, non-hidden element for audio
+      // to keep playing (display:none stops it), but we push it out of view so only the
+      // audio is used. NOTE: mobile browsers may refuse to play an off-screen video.
       container.style.cssText =
-        'position:fixed;width:160px;height:90px;right:0.75rem;bottom:5.5rem;z-index:45;' +
-        'border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.28);display:none;';
+        'position:fixed;width:200px;height:120px;left:-10000px;top:0;pointer-events:none;display:none;';
       document.body.appendChild(container);
     }
 
