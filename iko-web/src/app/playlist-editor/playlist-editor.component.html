@@ -1,4 +1,7 @@
-<div class="mx-auto max-w-7xl px-4 py-6">
+<div
+  class="mx-auto flex max-w-7xl flex-col overflow-hidden px-4 pt-6"
+  [style.height]="player.state.currentPlatform ? 'calc(100dvh - 9rem)' : 'calc(100dvh - 4rem)'"
+>
   <!-- Mobile tabs -->
   <div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border bg-muted p-1 lg:hidden">
     <button
@@ -23,9 +26,9 @@
     </button>
   </div>
 
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_3fr]">
+  <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[2fr_3fr]">
     <!-- Source Panel -->
-    <div class="lg:block" [class.hidden]="mobileTab !== 'source'">
+    <div class="min-h-0 overflow-y-auto pb-6 lg:block" [class.hidden]="mobileTab !== 'source'">
       <div class="relative mb-4">
         <ng-icon hlm name="lucideSearch" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input hlmInput [(ngModel)]="searchQuery" (input)="onSearchInput()" placeholder="Search tracks..." class="w-full pl-10" />
@@ -152,7 +155,7 @@
     </div>
 
     <!-- Iko Playlist Panel -->
-    <div class="lg:block" [class.hidden]="mobileTab !== 'playlist'">
+    <div class="min-h-0 overflow-y-auto pb-6 lg:block" [class.hidden]="mobileTab !== 'playlist'">
       <div class="mb-4 flex items-center gap-4">
         <!-- Cover with change / remove -->
         <div class="group/cover relative size-18 shrink-0 overflow-hidden rounded-lg bg-muted">
