@@ -15,10 +15,12 @@ import { PlayerService, IkoTrack } from './player.service';
 describe('PlayerService auto-advance guard', () => {
   let svc: PlayerService;
   const apiStub = {} as any;
+  // NgZone stub: run the callback synchronously, like the real zone would.
+  const zoneStub = { run: <T>(fn: () => T): T => fn() } as any;
 
   beforeEach(() => {
     localStorage.clear();
-    svc = new PlayerService(apiStub);
+    svc = new PlayerService(apiStub, zoneStub);
   });
 
   function seedQueue(n: number): void {

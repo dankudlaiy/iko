@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { toast } from 'ngx-sonner';
 import { ApiService } from './api.service';
 
@@ -57,7 +57,7 @@ export class PlayerService {
   // shared position poller pointing at a stale SDK (frozen progress bar).
   private isAdvancing = false;
 
-  constructor(private api: ApiService) {
+  constructor(private api: ApiService, private zone: NgZone) {
     const storedVolume = parseFloat(localStorage.getItem('iko_volume') ?? '1');
     if (!isNaN(storedVolume)) this.state.volume = Math.min(1, Math.max(0, storedVolume));
     this.state.isMuted = localStorage.getItem('iko_muted') === 'true';
@@ -343,20 +343,26 @@ export class PlayerService {
 
       this.spotifyPlayer.addListener('player_state_changed', (s: any) => {
         if (!s) return;
-        const prevPos = this.state.positionMs;
-        this.state.positionMs = s.position;
-        this.state.durationMs = s.duration;
-        // End-of-track: playback jumped from a progressed position back to a
-        // paused 0. Requiring prevPos > 0 avoids the transient paused/position-0
-        // state the SDK reports while the *next* track is buffering.
-        if (
-          s.paused &&
-          s.position === 0 &&
-          prevPos > 0 &&
-          s.track_window?.previous_tracks?.length > 0
-        ) {
-          this.handleTrackEnded();
-        }
+        // SDK events fire outside Angular's zone (iframe postMessage); run the
+        // state changes inside it so change detection updates the UI — otherwise
+        // the player bar / highlight / progress freeze on auto-advance even
+        // though playback and internal state move on.
+        this.zone.run(() => {
+          const prevPos = this.state.positionMs;
+          this.state.positionMs = s.position;
+          this.state.durationMs = s.duration;
+          // End-of-track: playback jumped from a progressed position back to a
+          // paused 0. Requiring prevPos > 0 avoids the transient paused/position-0
+          // state the SDK reports while the *next* track is buffering.
+          if (
+            s.paused &&
+            s.position === 0 &&
+            prevPos > 0 &&
+            s.track_window?.previous_tracks?.length > 0
+          ) {
+            this.handleTrackEnded();
+          }
+        });
       });
 
       this.spotifyPlayer.addListener('initialization_error', ({ message }: any) => {
@@ -416,16 +422,23 @@ export class PlayerService {
     this.ytPlayer = new (window as any).YT.Player('yt-player', {
       height: '90',
       width: '160',
-      playerVars: { playsinline: 1, rel: 0 },
+      // origin + enablejsapi make the IFrame API's postMessage bridge target the
+      // right window; without them the browser logs "target origin does not match"
+      // and the JS API (getCurrentTime, state events) becomes unreliable.
+      playerVars: { playsinline: 1, rel: 0, enablejsapi: 1, origin: window.location.origin },
       events: {
         onReady: () => resolve(),
         onStateChange: (event: any) => {
-          if (event.data === (window as any).YT.PlayerState.ENDED) {
-            this.handleTrackEnded();
-          }
-          if (event.data === (window as any).YT.PlayerState.PLAYING) {
-            this.state.durationMs = (this.ytPlayer.getDuration() || 0) * 1000;
-          }
+          // YT IFrame callbacks arrive outside Angular's zone — see the Spotify
+          // listener above; wrap so change detection runs.
+          this.zone.run(() => {
+            if (event.data === (window as any).YT.PlayerState.ENDED) {
+              this.handleTrackEnded();
+            }
+            if (event.data === (window as any).YT.PlayerState.PLAYING) {
+              this.state.durationMs = (this.ytPlayer.getDuration() || 0) * 1000;
+            }
+          });
         }
       }
     });
@@ -473,16 +486,22 @@ export class PlayerService {
     }
 
     this.musicKitInstance.addEventListener('playbackStateDidChange', () => {
-      if (this.musicKitInstance.playbackState === 10) {
-        this.handleTrackEnded();
-      }
+      this.zone.run(() => {
+        if (this.musicKitInstance.playbackState === 10) {
+          this.handleTrackEnded();
+        }
+      });
     });
   }
 
   // --- Position polling ---
   private startPositionPolling(platform: string): void {
     this.stopPositionPolling();
-    this.positionInterval = setInterval(() => {
+    // Schedule inside Angular's zone so every tick runs change detection. The
+    // advance that (re)starts polling can originate from an out-of-zone SDK
+    // callback; a poller scheduled there would leave the progress bar frozen.
+    this.zone.run(() => {
+      this.positionInterval = setInterval(() => {
       if (!this.state.isPlaying) return;
 
       switch (platform) {
@@ -508,7 +527,8 @@ export class PlayerService {
           }
           break;
       }
-    }, 500);
+      }, 500);
+    });
   }
 
   private stopPositionPolling(): void {
