@@ -146,7 +146,7 @@ public class AccountsController : ControllerBase
     public IActionResult ConnectSpotify()
     {
         var clientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID") ?? "";
-        var scopes = "user-read-private user-read-email playlist-modify-public playlist-modify-private streaming user-read-playback-state user-modify-playback-state";
+        var scopes = "user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private streaming user-read-playback-state user-modify-playback-state";
         var redirectUri = CallbackUri("spotify");
 
         var jwt = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
