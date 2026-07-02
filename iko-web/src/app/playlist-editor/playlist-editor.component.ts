@@ -42,6 +42,8 @@ export class PlaylistEditorComponent implements OnInit {
   searchQuery = '';
   searchResults: SearchResults = {};
   searchLoading = false;
+  searchError = false;
+  searchTab: 'all' | 'Spotify' | 'YouTube' = 'all';
   private searchSubject = new Subject<string>();
 
   selectedSourcePlatform = 'spotify';
@@ -70,6 +72,7 @@ export class PlaylistEditorComponent implements OnInit {
         this.performSearch(query);
       } else {
         this.searchResults = {};
+        this.searchError = false;
       }
     });
   }
@@ -137,20 +140,56 @@ export class PlaylistEditorComponent implements OnInit {
 
   private performSearch(query: string): void {
     this.searchLoading = true;
+    this.searchError = false;
     this.api.searchAllPlatforms(query).subscribe({
       next: res => {
         this.searchResults = res.data ?? {};
         this.searchLoading = false;
+        // Fall back to "All" if the active platform tab has no results.
+        if (this.searchTab !== 'all' && this.searchCount(this.searchTab) === 0) {
+          this.searchTab = 'all';
+        }
       },
       error: () => {
         this.searchResults = {};
         this.searchLoading = false;
+        this.searchError = true;
       }
     });
   }
 
-  searchPlatforms(): string[] {
-    return Object.keys(this.searchResults).filter(k => this.searchResults[k]?.length > 0);
+  searchCount(platform: string): number {
+    return this.searchResults[platform]?.length ?? 0;
+  }
+
+  get totalSearchResults(): number {
+    return Object.values(this.searchResults).reduce((n, list) => n + (list?.length ?? 0), 0);
+  }
+
+  /** Flattened rows for the active tab; "all" interleaves platforms round-robin. */
+  displayedResults(): { track: SearchTrack; platform: string }[] {
+    if (this.searchTab !== 'all') {
+      return (this.searchResults[this.searchTab] ?? []).map(t => ({ track: t, platform: this.searchTab }));
+    }
+    const platforms = ['Spotify', 'YouTube'];
+    const lists = platforms.map(p => (this.searchResults[p] ?? []).map(t => ({ track: t, platform: p })));
+    const out: { track: SearchTrack; platform: string }[] = [];
+    const max = Math.max(0, ...lists.map(l => l.length));
+    for (let i = 0; i < max; i++) {
+      for (const l of lists) if (l[i]) out.push(l[i]);
+    }
+    return out;
+  }
+
+  previewSearchTrack(track: SearchTrack, platform: string): void {
+    this.player.playTrack({
+      platformTrackId: track.platformTrackId,
+      name: track.name,
+      artist: track.artist,
+      imageUrl: track.imageUrl,
+      durationMs: track.durationMs,
+      platform: this.mapPlatform(platform.toLowerCase())
+    });
   }
 
   loadSourcePlaylists(): void {

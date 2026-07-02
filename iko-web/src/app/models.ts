@@ -58,8 +58,10 @@ export interface SearchTrack {
   platformTrackId: string;
   name: string;
   artist: string;
+  album?: string;
   imageUrl: string | null;
   durationMs: number;
+  explicit?: boolean;
 }
 
 export type SearchResults = Record<string, SearchTrack[]>;

@@ -38,31 +38,75 @@
       @if (searchQuery.trim()) {
         <div class="mb-6">
           <h4 class="mb-2 text-sm font-semibold text-muted-foreground">Search Results</h4>
-          @if (searchLoading) {
-            <p class="px-1 py-2 text-sm text-muted-foreground">Searching...</p>
-          }
-          @for (platform of searchPlatforms(); track platform) {
-            <div class="mb-3">
-              <span class="mb-1 block px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ platform }}</span>
-              @for (track of searchResults[platform]; track track.platformTrackId) {
-                <div class="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
-                  <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
-                  <div class="flex min-w-0 flex-1 flex-col">
-                    <span class="truncate text-sm font-medium">{{ track.name }}</span>
-                    <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
-                  </div>
-                  <app-platform-badge [platform]="platform" size="sm" />
-                  <span class="text-xs text-muted-foreground">{{ formatDuration(track.durationMs) }}</span>
-                  @if (isTrackInPlaylist(track.platformTrackId)) {
-                    <ng-icon hlm name="lucideCheck" class="text-primary" />
-                  } @else {
-                    <button hlmBtn variant="ghost" size="icon" aria-label="Add track" (click)="addTrack(track, platform)">
-                      <ng-icon hlm name="lucidePlus" />
-                    </button>
-                  }
-                </div>
+
+          @if (totalSearchResults > 0) {
+            <div class="mb-3 flex items-center gap-1 border-b">
+              @for (tab of ['all', 'Spotify', 'YouTube']; track tab) {
+                <button
+                  type="button"
+                  class="-mb-px border-b-2 px-3 py-1.5 text-sm font-medium transition-colors"
+                  [class.border-primary]="searchTab === tab"
+                  [class.text-foreground]="searchTab === tab"
+                  [class.border-transparent]="searchTab !== tab"
+                  [class.text-muted-foreground]="searchTab !== tab"
+                  (click)="searchTab = $any(tab)"
+                >
+                  {{ tab === 'all' ? 'All' : tab }}@if (tab !== 'all') {<span class="ml-1 text-xs text-muted-foreground">{{ searchCount(tab) }}</span>}
+                </button>
               }
             </div>
+          }
+
+          @if (searchLoading) {
+            @for (i of [0,1,2,3,4]; track i) {
+              <div class="flex items-center gap-3 p-2">
+                <div hlmSkeleton class="size-12 rounded"></div>
+                <div class="flex flex-1 flex-col gap-1.5">
+                  <div hlmSkeleton class="h-3 w-2/3"></div>
+                  <div hlmSkeleton class="h-2.5 w-2/5"></div>
+                </div>
+              </div>
+            }
+          } @else if (searchError) {
+            <p class="px-1 py-6 text-center text-sm text-muted-foreground">Search failed. Try again.</p>
+          } @else if (totalSearchResults === 0) {
+            <p class="px-1 py-6 text-center text-sm text-muted-foreground">No results for “{{ searchQuery }}”.</p>
+          } @else {
+            @for (r of displayedResults(); track r.platform + r.track.platformTrackId) {
+              <div class="group flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
+                <div class="relative size-12 shrink-0">
+                  <img [src]="r.track.imageUrl || 'https://via.placeholder.com/48?text=♪'" alt="" class="size-12 rounded object-cover" />
+                  <button
+                    type="button"
+                    class="absolute inset-0 flex items-center justify-center rounded bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    (click)="previewSearchTrack(r.track, r.platform)"
+                    aria-label="Preview"
+                  >
+                    <ng-icon hlm name="lucidePlay" />
+                  </button>
+                </div>
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <span class="flex items-center gap-1.5 truncate text-sm font-medium">
+                    {{ r.track.name }}
+                    @if (r.track.explicit) {
+                      <span class="rounded-sm bg-muted px-1 text-[0.625rem] font-semibold leading-tight text-muted-foreground">E</span>
+                    }
+                  </span>
+                  <span class="truncate text-xs text-muted-foreground">
+                    {{ r.track.artist }}@if (r.track.album) { · {{ r.track.album }}}
+                  </span>
+                </div>
+                <app-platform-badge [platform]="r.platform" size="sm" />
+                <span class="text-xs text-muted-foreground">{{ formatDuration(r.track.durationMs) }}</span>
+                @if (isTrackInPlaylist(r.track.platformTrackId)) {
+                  <ng-icon hlm name="lucideCheck" class="text-primary" />
+                } @else {
+                  <button hlmBtn variant="ghost" size="icon" aria-label="Add track" (click)="addTrack(r.track, r.platform)">
+                    <ng-icon hlm name="lucidePlus" />
+                  </button>
+                }
+              </div>
+            }
           }
         </div>
       }
