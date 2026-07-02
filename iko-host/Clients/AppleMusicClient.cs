@@ -68,6 +68,48 @@ public class AppleMusicClient : IPlatformClient
         };
     }
 
+    public async Task<List<SearchResultTrack>> SearchTracks(string query, int limit, string? accessToken = null)
+    {
+        var results = new List<SearchResultTrack>();
+        if (string.IsNullOrEmpty(accessToken)) return results;
+
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://api.music.apple.com/v1/catalog/us/search?types=songs&limit={limit}&term={Uri.EscapeDataString(query)}");
+        request.Headers.Add("Authorization", $"Bearer {_developerToken}");
+        request.Headers.Add("Music-User-Token", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Apple Music search failed for {Query}: HTTP {Status}", query, (int)response.StatusCode);
+            return results;
+        }
+
+        dynamic? obj = JsonConvert.DeserializeObject(content);
+        var songs = obj?.results?.songs?.data;
+        if (songs == null) return results;
+
+        foreach (var song in songs)
+        {
+            string? imageUrl = song.attributes?.artwork?.url?.ToString()
+                ?.Replace("{w}", "300").Replace("{h}", "300");
+            results.Add(new SearchResultTrack
+            {
+                PlatformTrackId = song.id.ToString(),
+                Name = song.attributes?.name?.ToString() ?? "",
+                Artist = song.attributes?.artistName?.ToString() ?? "",
+                Album = song.attributes?.albumName?.ToString(),
+                ImageUrl = imageUrl,
+                DurationMs = (int)(song.attributes?.durationInMillis ?? 0),
+                Explicit = song.attributes?.contentRating?.ToString() == "explicit",
+                Platform = "AppleMusic"
+            });
+        }
+
+        return results;
+    }
+
     public async Task<(string Url, string? ImageUrl)> CreatePlaylist(IEnumerable<string> trackIds, string accessToken, string? name = null)
     {
         var trackData = trackIds.Select(id => new

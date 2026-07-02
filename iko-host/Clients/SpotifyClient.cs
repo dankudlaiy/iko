@@ -66,6 +66,54 @@ public class SpotifyClient : IPlatformClient
         };
     }
 
+    public async Task<List<SearchResultTrack>> SearchTracks(string query, int limit, string? accessToken = null)
+    {
+        accessToken ??= await GetAccessToken();
+
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://api.spotify.com/v1/search?type=track&limit={limit}&q={Uri.EscapeDataString(query)}");
+        request.Headers.Add("Authorization", $"Bearer {accessToken}");
+
+        var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        var results = new List<SearchResultTrack>();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Spotify search failed for {Query}: HTTP {Status}", query, (int)response.StatusCode);
+            return results;
+        }
+
+        dynamic? obj = JsonConvert.DeserializeObject(content);
+        var items = obj?.tracks?.items;
+        if (items == null) return results;
+
+        foreach (var t in items)
+        {
+            var artists = new List<string>();
+            if (t.artists != null)
+                foreach (var a in t.artists) artists.Add(a.name.ToString());
+
+            string? imageUrl = null;
+            if (t.album?.images != null && t.album.images.HasValues)
+                imageUrl = t.album.images[0].url.ToString();
+
+            results.Add(new SearchResultTrack
+            {
+                PlatformTrackId = t.id.ToString(),
+                Name = t.name.ToString(),
+                Artist = string.Join(", ", artists),
+                Album = t.album?.name?.ToString(),
+                ImageUrl = imageUrl,
+                DurationMs = (int)(t.duration_ms ?? 0),
+                Explicit = (bool)(t.@explicit ?? false),
+                Platform = "Spotify"
+            });
+        }
+
+        return results;
+    }
+
     public async Task<List<PlaylistSummary>> GetPlaylists(string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.spotify.com/v1/me/playlists?limit=50");

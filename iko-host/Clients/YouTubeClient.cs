@@ -108,6 +108,64 @@ public class YouTubeClient : IPlatformClient
         };
     }
 
+    public async Task<List<SearchResultTrack>> SearchTracks(string query, int limit, string? accessToken = null)
+    {
+        var q = Uri.EscapeDataString(query);
+        string url;
+        if (!string.IsNullOrEmpty(accessToken))
+            url = $"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults={limit}&q={q}";
+        else if (!string.IsNullOrEmpty(_apiKey))
+            url = $"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults={limit}&q={q}&key={_apiKey}";
+        else
+            return new List<SearchResultTrack>();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (!string.IsNullOrEmpty(accessToken))
+            request.Headers.Add("Authorization", $"Bearer {accessToken}");
+
+        var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        var results = new List<SearchResultTrack>();
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("YouTube search failed for {Query}: HTTP {Status}", query, (int)response.StatusCode);
+            return results;
+        }
+
+        dynamic? obj = JsonConvert.DeserializeObject(content);
+        if (obj?.items == null) return results;
+
+        var raw = new List<(string id, string name, string artist, string? img)>();
+        foreach (var item in obj.items)
+        {
+            string videoId = item.id?.videoId?.ToString() ?? "";
+            if (string.IsNullOrEmpty(videoId)) continue;
+            string? img = item.snippet?.thumbnails?.medium?.url?.ToString();
+            raw.Add((videoId,
+                item.snippet?.title?.ToString() ?? "",
+                item.snippet?.channelTitle?.ToString() ?? "",
+                img));
+        }
+
+        var durations = await FetchDurations(raw.Select(r => r.id), accessToken);
+
+        foreach (var r in raw)
+            results.Add(new SearchResultTrack
+            {
+                PlatformTrackId = r.id,
+                Name = r.name,
+                Artist = r.artist,
+                Album = null,
+                ImageUrl = r.img,
+                DurationMs = durations.GetValueOrDefault(r.id, 0),
+                Explicit = false,
+                Platform = "YouTube"
+            });
+
+        return results;
+    }
+
     public async Task<(string Url, string? ImageUrl)> CreatePlaylist(IEnumerable<string> trackIds, string accessToken, string? name = null)
     {
         // Create playlist
@@ -302,7 +360,7 @@ public class YouTubeClient : IPlatformClient
         }).ToList();
     }
 
-    private async Task<Dictionary<string, int>> FetchDurations(IEnumerable<string> videoIds, string accessToken)
+    private async Task<Dictionary<string, int>> FetchDurations(IEnumerable<string> videoIds, string? accessToken)
     {
         var result = new Dictionary<string, int>();
         var ids = videoIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
@@ -313,9 +371,13 @@ public class YouTubeClient : IPlatformClient
             var batch = string.Join(",", ids.Skip(i).Take(50));
             try
             {
-                var req = new HttpRequestMessage(HttpMethod.Get,
-                    $"https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id={batch}");
-                req.Headers.Add("Authorization", $"Bearer {accessToken}");
+                var url = $"https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id={batch}";
+                if (string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(_apiKey))
+                    url += $"&key={_apiKey}";
+
+                var req = new HttpRequestMessage(HttpMethod.Get, url);
+                if (!string.IsNullOrEmpty(accessToken))
+                    req.Headers.Add("Authorization", $"Bearer {accessToken}");
 
                 var res = await _httpClient.SendAsync(req);
                 dynamic? data = JsonConvert.DeserializeObject(await res.Content.ReadAsStringAsync());

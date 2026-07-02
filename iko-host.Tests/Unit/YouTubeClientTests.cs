@@ -75,6 +75,25 @@ public class YouTubeClientTests
     }
 
     [Fact]
+    public async Task SearchTracks_returns_multiple_results()
+    {
+        var handler = new StubHttpMessageHandler(req =>
+            req.RequestUri!.AbsolutePath.Contains("/videos")
+                ? StubHttpMessageHandler.Json(HttpStatusCode.OK,
+                    """{"items":[{"id":"v1","contentDetails":{"duration":"PT3M"}},{"id":"v2","contentDetails":{"duration":"PT2M"}}]}""")
+                : StubHttpMessageHandler.Json(HttpStatusCode.OK,
+                    """{"items":[{"id":{"videoId":"v1"},"snippet":{"title":"T1","channelTitle":"C1","thumbnails":{"medium":{"url":"https://img/1"}}}},{"id":{"videoId":"v2"},"snippet":{"title":"T2","channelTitle":"C2","thumbnails":{"medium":{"url":"https://img/2"}}}}]}"""));
+
+        var res = await Client(handler).SearchTracks("q", 15, "oauth-token");
+
+        Assert.Equal(2, res.Count);
+        Assert.Equal("v1", res[0].PlatformTrackId);
+        Assert.Equal("C1", res[0].Artist);
+        Assert.Equal(180000, res[0].DurationMs);
+        Assert.Equal("YouTube", res[0].Platform);
+    }
+
+    [Fact]
     public async Task GetPlaylists_throws_PlatformApiException_on_http_error()
     {
         var handler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.Forbidden, "{}");

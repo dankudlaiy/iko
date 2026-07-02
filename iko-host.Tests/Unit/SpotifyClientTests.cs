@@ -74,6 +74,30 @@ public class SpotifyClientTests
     }
 
     [Fact]
+    public async Task SearchTracks_returns_multiple_with_album_and_explicit()
+    {
+        var handler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.OK,
+            """{"tracks":{"items":[{"id":"a","name":"Song A","duration_ms":200000,"explicit":true,"album":{"name":"Alb","images":[{"url":"https://img/a"}]},"artists":[{"name":"X"}]},{"id":"b","name":"Song B","duration_ms":180000,"explicit":false,"album":{"name":"Alb2","images":[]},"artists":[{"name":"Y"},{"name":"Z"}]}]}}""");
+
+        var res = await Client(handler).SearchTracks("q", 15, "user-token");
+
+        Assert.Equal(2, res.Count);
+        Assert.Equal("a", res[0].PlatformTrackId);
+        Assert.Equal("Alb", res[0].Album);
+        Assert.True(res[0].Explicit);
+        Assert.Equal("https://img/a", res[0].ImageUrl);
+        Assert.Equal("Y, Z", res[1].Artist);
+        Assert.Equal("Spotify", res[0].Platform);
+    }
+
+    [Fact]
+    public async Task SearchTracks_returns_empty_on_http_error()
+    {
+        var handler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.TooManyRequests, "{}");
+        Assert.Empty(await Client(handler).SearchTracks("q", 15, "user-token"));
+    }
+
+    [Fact]
     public async Task GetPlaylistTracks_maps_library_tracks()
     {
         var handler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.OK,

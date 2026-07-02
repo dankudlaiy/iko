@@ -9,5 +9,6 @@ public interface IPlatformClient
     Task<List<PlaylistSummary>> GetPlaylists(string accessToken);
     Task<List<LibraryTrack>> GetPlaylistTracks(string playlistId, string accessToken);
     Task<TrackModel?> SearchForTrack(string name, string artist, string? accessToken = null);
+    Task<List<SearchResultTrack>> SearchTracks(string query, int limit, string? accessToken = null);
     Task<(string Url, string? ImageUrl)> CreatePlaylist(IEnumerable<string> trackIds, string accessToken, string? name = null);
 }

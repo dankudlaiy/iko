@@ -60,18 +60,17 @@ public class SearchController : ControllerBase
             try
             {
                 var token = tokens.GetValueOrDefault(platform);
-                var track = await _clients.Get(platform).SearchForTrack(q, "", token);
-                if (track?.PlatformTrackId != null)
+                var tracks = await _clients.Get(platform).SearchTracks(q, 15, token);
+                found.AddRange(tracks.Select(t => (object)new
                 {
-                    found.Add(new
-                    {
-                        platformTrackId = track.PlatformTrackId,
-                        name = track.Name,
-                        artist = track.Artist,
-                        imageUrl = track.ImageUrl,
-                        durationMs = track.DurationMs
-                    });
-                }
+                    platformTrackId = t.PlatformTrackId,
+                    name = t.Name,
+                    artist = t.Artist,
+                    album = t.Album,
+                    imageUrl = t.ImageUrl,
+                    durationMs = t.DurationMs,
+                    @explicit = t.Explicit
+                }));
             }
             catch (Exception ex)
             {
