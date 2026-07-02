@@ -1,7 +1,23 @@
-<div class="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-6 p-4 text-center">
+<div
+  class="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-6 p-4 text-center animate-fade-up"
+>
+  <div class="flex items-center gap-2">
+    <span
+      class="flex size-8 items-center justify-center gap-[3px] rounded-lg bg-gradient-to-br from-primary to-violet-500 shadow-sm"
+    >
+      <span class="h-3 w-[3px] rounded-full bg-white/90"></span>
+      <span class="h-4 w-[3px] rounded-full bg-white"></span>
+      <span class="h-2.5 w-[3px] rounded-full bg-white/80"></span>
+    </span>
+    <span
+      class="font-heading text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent"
+      >iko</span
+    >
+  </div>
+
   @if (loading) {
     <hlm-spinner class="text-primary" style="font-size: 3rem"></hlm-spinner>
-    <p class="text-base text-muted-foreground">Completing authorization...</p>
+    <p class="text-sm text-muted-foreground">Completing authorization...</p>
   }
 
   @if (errorMessage) {

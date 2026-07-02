@@ -3,7 +3,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideShuffle, lucideSkipBack, lucideSkipForward,
   lucidePlay, lucidePause, lucideRepeat, lucideRepeat1,
-  lucideVolume2, lucideVolume1, lucideVolumeX
+  lucideVolume2, lucideVolume1, lucideVolumeX, lucideMusic
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmIcon } from '@spartan-ng/helm/icon';
@@ -16,7 +16,7 @@ import { PlatformBadgeComponent } from '../platform-badge/platform-badge.compone
     viewProviders: [provideIcons({
       lucideShuffle, lucideSkipBack, lucideSkipForward,
       lucidePlay, lucidePause, lucideRepeat, lucideRepeat1,
-      lucideVolume2, lucideVolume1, lucideVolumeX
+      lucideVolume2, lucideVolume1, lucideVolumeX, lucideMusic
     })],
     templateUrl: './player-bar.component.html',
 })

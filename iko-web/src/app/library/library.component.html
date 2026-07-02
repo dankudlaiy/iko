@@ -2,8 +2,8 @@
   <!-- Iko Playlists Section -->
   <section class="mb-12">
     <div class="mb-4 flex items-center justify-between gap-3">
-      <h2 class="text-2xl font-bold tracking-tight">Your iko Playlists</h2>
-      <button hlmBtn (click)="showNewPlaylistDialog = true">
+      <h2 class="font-heading text-2xl font-bold tracking-tight">Your iko Playlists</h2>
+      <button hlmBtn class="shadow-glow" (click)="showNewPlaylistDialog = true">
         <ng-icon hlm name="lucidePlus" />
         New Playlist
       </button>
@@ -22,11 +22,13 @@
     } @else {
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" [@cardStagger]="ikoPlaylists.length">
         @for (playlist of ikoPlaylists; track playlist.id) {
-          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="openIkoPlaylist(playlist.id)">
-            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" (click)="openIkoPlaylist(playlist.id)">
+            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted shadow-sm transition-shadow duration-200 group-hover:shadow-xl">
               <app-playlist-cover [coverUrl]="playlist.coverUrl" [images]="playlist.coverImages || []" class="block size-full" />
-              <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <ng-icon hlm name="lucidePlay" class="text-4xl text-white" />
+              <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/70 via-black/15 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <span class="flex size-11 scale-90 items-center justify-center rounded-full bg-play text-play-foreground shadow-lg transition-transform duration-200 group-hover:scale-100">
+                  <ng-icon hlm name="lucidePlay" class="text-2xl" />
+                </span>
               </div>
             </div>
             <span class="truncate text-sm font-medium">{{ playlist.name }}</span>
@@ -34,9 +36,9 @@
           </button>
         }
 
-        <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="showNewPlaylistDialog = true">
-          <div class="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors group-hover:border-primary group-hover:text-primary">
-            <ng-icon hlm name="lucidePlus" class="text-4xl" />
+        <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" (click)="showNewPlaylistDialog = true">
+          <div class="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors group-hover:border-primary group-hover:bg-primary/5 group-hover:text-primary">
+            <ng-icon hlm name="lucidePlus" class="text-4xl transition-transform duration-200 group-hover:scale-110" />
           </div>
           <span class="truncate text-sm font-medium">Create</span>
         </button>
@@ -46,7 +48,7 @@
 
   <!-- Platform Playlists Section -->
   <section>
-    <h2 class="mb-4 text-2xl font-bold tracking-tight">Your Platform Playlists</h2>
+    <h2 class="mb-4 font-heading text-2xl font-bold tracking-tight">Your Platform Playlists</h2>
 
     <div class="mb-4 flex flex-wrap gap-2">
       @for (tab of platformTabs; track tab.id) {
@@ -85,8 +87,8 @@
     } @else {
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" [@cardStagger]="platformPlaylists.length">
         @for (pl of platformPlaylists; track pl.id) {
-          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-colors hover:bg-accent" (click)="togglePlaylistExpand(pl.id)">
-            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+          <button type="button" class="group flex flex-col gap-2 rounded-xl p-2 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" (click)="togglePlaylistExpand(pl.id)">
+            <div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted shadow-sm transition-shadow duration-200 group-hover:shadow-xl">
               @if (pl.imageUrl) {
                 <img [src]="pl.imageUrl" alt="" class="size-full object-cover" />
               } @else {
@@ -94,8 +96,10 @@
                   <ng-icon hlm name="lucideListMusic" class="text-4xl" />
                 </div>
               }
-              <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" (click)="$event.stopPropagation(); playPlatformPlaylist(pl)">
-                <ng-icon hlm name="lucidePlay" class="text-4xl text-white" />
+              <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/70 via-black/15 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" (click)="$event.stopPropagation(); playPlatformPlaylist(pl)">
+                <span class="flex size-11 scale-90 items-center justify-center rounded-full bg-play text-play-foreground shadow-lg transition-transform duration-200 group-hover:scale-100">
+                  <ng-icon hlm name="lucidePlay" class="text-2xl" />
+                </span>
               </div>
             </div>
             <span class="truncate text-sm font-medium">{{ pl.name }}</span>
@@ -119,7 +123,13 @@
           } @else {
             @for (track of expandedPlaylistTracks; track track.platformTrackId) {
               <div class="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent">
-                <img [src]="track.imageUrl || 'https://via.placeholder.com/40?text=♪'" alt="" class="size-10 shrink-0 rounded object-cover" />
+                @if (track.imageUrl) {
+                  <img [src]="track.imageUrl" alt="" class="size-10 shrink-0 rounded object-cover" />
+                } @else {
+                  <div class="flex size-10 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                    <ng-icon hlm name="lucideMusic" class="text-base" />
+                  </div>
+                }
                 <div class="flex min-w-0 flex-1 flex-col">
                   <span class="truncate text-sm font-medium">{{ track.name }}</span>
                   <span class="truncate text-xs text-muted-foreground">{{ track.artist }}</span>
@@ -149,8 +159,8 @@
 <!-- New Playlist Dialog -->
 @if (showNewPlaylistDialog) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="showNewPlaylistDialog = false">
-    <div class="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl" (click)="$event.stopPropagation()">
-      <h3 class="mb-4 text-lg font-semibold">Create New Playlist</h3>
+    <div class="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl animate-fade-up" (click)="$event.stopPropagation()">
+      <h3 class="mb-4 font-heading text-lg font-semibold">Create New Playlist</h3>
       <div class="flex flex-col gap-1.5">
         <label hlmLabel for="newPlaylistName">Playlist name</label>
         <input hlmInput id="newPlaylistName" [(ngModel)]="newPlaylistName" (keydown.enter)="createNewPlaylist()" class="w-full" />

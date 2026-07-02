@@ -1,11 +1,19 @@
 <div
-  class="flex items-center gap-3 rounded-lg border bg-card p-2.5 shadow-sm transition-shadow hover:shadow-md sm:p-3"
+  class="flex items-center gap-3 rounded-xl border bg-card p-2.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-3"
 >
-  <img
-    [src]="imageUrl || 'https://via.placeholder.com/60x60?text=No+Art'"
-    [alt]="name"
-    class="size-12 shrink-0 rounded-md object-cover sm:size-[60px]"
-  />
+  @if (imageUrl) {
+    <img
+      [src]="imageUrl"
+      [alt]="name"
+      class="size-12 shrink-0 rounded-md object-cover sm:size-[60px]"
+    />
+  } @else {
+    <div
+      class="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:size-[60px]"
+    >
+      <ng-icon hlm name="lucideMusic" class="text-xl" />
+    </div>
+  }
   <div class="flex min-w-0 flex-1 flex-col">
     <span class="truncate text-sm font-medium text-foreground">{{ name }}</span>
     <span class="truncate text-xs text-muted-foreground">{{ artist }}</span>
@@ -14,6 +22,9 @@
     hlmBadge
     [variant]="matched ? 'default' : 'secondary'"
     class="shrink-0 uppercase tracking-wide"
+    [class.bg-play]="matched"
+    [class.text-play-foreground]="matched"
+    [class.border-transparent]="matched"
   >
     {{ matched ? 'Matched' : 'Not Found' }}
   </span>

@@ -2,9 +2,23 @@
   class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-b from-secondary to-background p-4"
 >
   <div
-    class="w-full max-w-sm rounded-xl border bg-card p-8 text-card-foreground shadow-lg shadow-primary/5"
+    class="w-full max-w-sm rounded-xl border bg-card p-6 text-card-foreground shadow-lg animate-fade-up sm:p-8"
   >
-    <h1 class="mb-6 text-center text-2xl font-bold">Sign In</h1>
+    <div class="mb-6 flex items-center justify-center gap-2">
+      <span
+        class="flex size-8 items-center justify-center gap-[3px] rounded-lg bg-gradient-to-br from-primary to-violet-500 shadow-sm"
+      >
+        <span class="h-3 w-[3px] rounded-full bg-white/90"></span>
+        <span class="h-4 w-[3px] rounded-full bg-white"></span>
+        <span class="h-2.5 w-[3px] rounded-full bg-white/80"></span>
+      </span>
+      <span
+        class="font-heading text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent"
+        >iko</span
+      >
+    </div>
+
+    <h1 class="mb-6 text-center font-heading text-2xl font-bold tracking-tight">Sign In</h1>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
       <div class="flex flex-col gap-1.5">
@@ -43,7 +57,7 @@
         <p class="text-center text-sm text-destructive">{{ errorMessage }}</p>
       }
 
-      <button hlmBtn type="submit" [disabled]="form.invalid" class="mt-2 w-full">
+      <button hlmBtn type="submit" [disabled]="form.invalid" class="mt-2 w-full shadow-glow">
         Sign In
       </button>
     </form>

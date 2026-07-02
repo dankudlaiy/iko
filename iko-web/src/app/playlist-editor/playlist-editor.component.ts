@@ -5,7 +5,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideSearch, lucideChevronRight, lucidePlay, lucidePencil,
-  lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera
+  lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera, lucideMusic
 } from '@ng-icons/lucide';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { toast } from 'ngx-sonner';
@@ -28,7 +28,7 @@ import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.compone
     ],
     viewProviders: [provideIcons({
       lucideSearch, lucideChevronRight, lucidePlay, lucidePencil,
-      lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera
+      lucideX, lucideGripVertical, lucideListMusic, lucidePlus, lucideCheck, lucideCamera, lucideMusic
     })],
     templateUrl: './playlist-editor.component.html',
 })

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate, stagger, query } from '@angular/animations';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlus, lucideListMusic, lucidePlay, lucideLock } from '@ng-icons/lucide';
+import { lucidePlus, lucideListMusic, lucidePlay, lucideLock, lucideMusic } from '@ng-icons/lucide';
 import { toast } from 'ngx-sonner';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmInput } from '@spartan-ng/helm/input';
@@ -24,7 +24,7 @@ import { PlaylistCoverComponent } from '../playlist-cover/playlist-cover.compone
         FormsModule, NgIcon, HlmIcon, HlmButton, HlmInput, HlmLabel,
         HlmSkeleton, HlmTooltip, ...HlmDropdownMenuImports, PlatformBadgeComponent, PlaylistCoverComponent
     ],
-    viewProviders: [provideIcons({ lucidePlus, lucideListMusic, lucidePlay, lucideLock })],
+    viewProviders: [provideIcons({ lucidePlus, lucideListMusic, lucidePlay, lucideLock, lucideMusic })],
     templateUrl: './library.component.html',
     animations: [
         trigger('cardStagger', [
