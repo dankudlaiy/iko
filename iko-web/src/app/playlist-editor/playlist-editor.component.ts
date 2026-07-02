@@ -47,8 +47,7 @@ export class PlaylistEditorComponent implements OnInit {
   selectedSourcePlatform = 'spotify';
   sourcePlatforms = [
     { id: 'spotify', name: 'Spotify' },
-    { id: 'youtube', name: 'YouTube' },
-    { id: 'applemusic', name: 'Apple Music' }
+    { id: 'youtube', name: 'YouTube' }
   ];
   sourcePlaylists: LibraryPlaylist[] = [];
   expandedSourcePlaylist: string | null = null;
@@ -169,6 +168,12 @@ export class PlaylistEditorComponent implements OnInit {
     });
   }
 
+  selectSourcePlatform(id: string): void {
+    if (this.selectedSourcePlatform === id) return;
+    this.selectedSourcePlatform = id;
+    this.onSourcePlatformChange();
+  }
+
   onSourcePlatformChange(): void {
     this.expandedSourcePlaylist = null;
     this.loadSourcePlaylists();
@@ -240,19 +245,6 @@ export class PlaylistEditorComponent implements OnInit {
     const queue: IkoTrack[] = this.tracks.map(t => this.toIkoTrack(t));
     const index = this.tracks.indexOf(track);
     this.player.playPlaylist(queue, index >= 0 ? index : 0);
-  }
-
-  playSourcePlaylist(): void {
-    if (this.sourcePlaylistTracks.length === 0) return;
-    const queue: IkoTrack[] = this.sourcePlaylistTracks.map(t => ({
-      platformTrackId: t.platformTrackId,
-      name: t.name,
-      artist: t.artist,
-      imageUrl: t.imageUrl,
-      durationMs: t.durationMs,
-      platform: this.mapPlatform(this.selectedSourcePlatform)
-    }));
-    this.player.playPlaylist(queue, 0);
   }
 
   exporting = false;

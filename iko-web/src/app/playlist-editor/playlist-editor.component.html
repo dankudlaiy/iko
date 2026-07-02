@@ -68,15 +68,24 @@
       <div>
         <div class="mb-3 flex items-center justify-between gap-3">
           <h4 class="text-sm font-semibold text-muted-foreground">My Playlists</h4>
-          <select
-            [(ngModel)]="selectedSourcePlatform"
-            (change)="onSourcePlatformChange()"
-            class="h-9 rounded-md border border-input bg-background px-2.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
+          <div class="flex items-center gap-1">
             @for (p of sourcePlatforms; track p.id) {
-              <option [value]="p.id">{{ p.name }}</option>
+              <button
+                type="button"
+                class="flex size-9 items-center justify-center rounded-md border transition-all"
+                [class.border-primary]="selectedSourcePlatform === p.id"
+                [class.bg-accent]="selectedSourcePlatform === p.id"
+                [class.border-transparent]="selectedSourcePlatform !== p.id"
+                [class.opacity-40]="selectedSourcePlatform !== p.id"
+                [class.hover:opacity-100]="selectedSourcePlatform !== p.id"
+                (click)="selectSourcePlatform(p.id)"
+                [attr.aria-label]="p.name"
+                [attr.aria-pressed]="selectedSourcePlatform === p.id"
+              >
+                <app-platform-badge [platform]="p.id" size="sm" />
+              </button>
             }
-          </select>
+          </div>
         </div>
 
         @if (loadingSourcePlaylists) {
@@ -93,17 +102,24 @@
 
         @for (pl of sourcePlaylists; track pl.id) {
           <div class="border-b border-border last:border-0">
-            <div class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent" (click)="toggleSourcePlaylist(pl.id)">
+            <div class="flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent" (click)="toggleSourcePlaylist(pl.id)">
+              @if (pl.imageUrl) {
+                <img [src]="pl.imageUrl" alt="" class="size-10 shrink-0 rounded object-cover" />
+              } @else {
+                <div class="flex size-10 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                  <ng-icon hlm name="lucideListMusic" class="text-base" />
+                </div>
+              }
+              <div class="flex min-w-0 flex-1 flex-col">
+                <span class="truncate text-sm font-medium">{{ pl.name }}</span>
+                <span class="text-xs text-muted-foreground">{{ pl.trackCount }} tracks</span>
+              </div>
               <ng-icon
                 hlm
                 name="lucideChevronRight"
-                class="text-muted-foreground transition-transform"
+                class="shrink-0 text-muted-foreground transition-transform"
                 [class.rotate-90]="expandedSourcePlaylist === pl.id"
               />
-              <span class="flex-1 truncate text-sm font-medium">{{ pl.name }}</span>
-              <button hlmBtn variant="ghost" size="icon" aria-label="Play playlist" (click)="$event.stopPropagation(); playSourcePlaylist()">
-                <ng-icon hlm name="lucidePlay" />
-              </button>
             </div>
 
             @if (expandedSourcePlaylist === pl.id) {

@@ -105,7 +105,7 @@ export class ApiService {
   }
 
   // Search
-  searchAllPlatforms(query: string, platforms = 'Spotify,YouTube,AppleMusic'): Observable<ApiResponse<SearchResults>> {
+  searchAllPlatforms(query: string, platforms = 'Spotify,YouTube'): Observable<ApiResponse<SearchResults>> {
     return this.http.get<ApiResponse<SearchResults>>(`${API_URL}/search`, { params: { q: query, platforms } });
   }
 

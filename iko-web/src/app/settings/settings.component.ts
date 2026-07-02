@@ -24,8 +24,7 @@ export class SettingsComponent implements OnInit {
 
   platforms: PlatformConfig[] = [
     { id: 'spotify', name: 'Spotify', icon: '🎧' },
-    { id: 'youtube', name: 'YouTube', icon: '▶️' },
-    { id: 'applemusic', name: 'Apple Music', icon: '🍎' }
+    { id: 'youtube', name: 'YouTube', icon: '▶️' }
   ];
 
   constructor(

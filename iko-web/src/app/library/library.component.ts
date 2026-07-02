@@ -43,8 +43,7 @@ export class LibraryComponent implements OnInit {
 
   platformTabs = [
     { id: 'spotify',    name: 'Spotify',     connected: false },
-    { id: 'youtube',    name: 'YouTube',     connected: false },
-    { id: 'applemusic', name: 'Apple Music', connected: false }
+    { id: 'youtube',    name: 'YouTube',     connected: false }
   ];
   selectedPlatformTab = 'spotify';
   platformPlaylists: LibraryPlaylist[] = [];
