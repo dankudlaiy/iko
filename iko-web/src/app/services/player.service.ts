@@ -51,6 +51,11 @@ export class PlayerService {
   private musicKitInstance: any = null;
   private positionInterval: ReturnType<typeof setInterval> | null = null;
   private _prewarming = false;
+  // Guards the auto-advance path. Player SDKs (notably Spotify's Web Playback SDK)
+  // emit several "track ended" events per track; without this lock each one would
+  // call next() again, overlapping playback (two tracks at once) and leaving the
+  // shared position poller pointing at a stale SDK (frozen progress bar).
+  private isAdvancing = false;
 
   constructor(private api: ApiService) {
     const storedVolume = parseFloat(localStorage.getItem('iko_volume') ?? '1');
@@ -145,30 +150,49 @@ export class PlayerService {
     await this.resumeCurrentSdk();
   }
 
+  /**
+   * Single entry point for SDK "track ended" signals. SDKs fire these multiple
+   * times per track end; the isAdvancing lock in next() collapses them into one
+   * advance so playback never overlaps.
+   */
+  private handleTrackEnded(): void {
+    if (this.isAdvancing) return;
+    this.next();
+  }
+
   async next(): Promise<void> {
     this.activateForGesture();
-    if (this.state.repeatMode === 'one') {
-      this.playCurrentTrack();
-      return;
-    }
-
-    let nextIndex = this.state.currentIndex + 1;
-
-    if (this.state.isShuffle) {
-      nextIndex = Math.floor(Math.random() * this.state.queue.length);
-    }
-
-    if (nextIndex >= this.state.queue.length) {
-      if (this.state.repeatMode === 'all') {
-        nextIndex = 0;
-      } else {
-        this.state.isPlaying = false;
+    // Collapse duplicate/rapid advances (auto or manual) into one. The lock is
+    // held until the next track's SDK has actually started, which is the exact
+    // window during which SDKs emit their extra end events.
+    if (this.isAdvancing) return;
+    this.isAdvancing = true;
+    try {
+      if (this.state.repeatMode === 'one') {
+        await this.playCurrentTrack();
         return;
       }
-    }
 
-    this.state.currentIndex = nextIndex;
-    this.playCurrentTrack();
+      let nextIndex = this.state.currentIndex + 1;
+
+      if (this.state.isShuffle) {
+        nextIndex = Math.floor(Math.random() * this.state.queue.length);
+      }
+
+      if (nextIndex >= this.state.queue.length) {
+        if (this.state.repeatMode === 'all') {
+          nextIndex = 0;
+        } else {
+          this.state.isPlaying = false;
+          return;
+        }
+      }
+
+      this.state.currentIndex = nextIndex;
+      await this.playCurrentTrack();
+    } finally {
+      this.isAdvancing = false;
+    }
   }
 
   async previous(): Promise<void> {
@@ -319,10 +343,19 @@ export class PlayerService {
 
       this.spotifyPlayer.addListener('player_state_changed', (s: any) => {
         if (!s) return;
+        const prevPos = this.state.positionMs;
         this.state.positionMs = s.position;
         this.state.durationMs = s.duration;
-        if (s.paused && s.position === 0 && s.track_window?.previous_tracks?.length > 0) {
-          this.next();
+        // End-of-track: playback jumped from a progressed position back to a
+        // paused 0. Requiring prevPos > 0 avoids the transient paused/position-0
+        // state the SDK reports while the *next* track is buffering.
+        if (
+          s.paused &&
+          s.position === 0 &&
+          prevPos > 0 &&
+          s.track_window?.previous_tracks?.length > 0
+        ) {
+          this.handleTrackEnded();
         }
       });
 
@@ -388,7 +421,7 @@ export class PlayerService {
         onReady: () => resolve(),
         onStateChange: (event: any) => {
           if (event.data === (window as any).YT.PlayerState.ENDED) {
-            this.next();
+            this.handleTrackEnded();
           }
           if (event.data === (window as any).YT.PlayerState.PLAYING) {
             this.state.durationMs = (this.ytPlayer.getDuration() || 0) * 1000;
@@ -441,7 +474,7 @@ export class PlayerService {
 
     this.musicKitInstance.addEventListener('playbackStateDidChange', () => {
       if (this.musicKitInstance.playbackState === 10) {
-        this.next();
+        this.handleTrackEnded();
       }
     });
   }
