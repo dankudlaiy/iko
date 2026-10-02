@@ -26,9 +26,6 @@ from any machine. No secret values live in this file — only structure and loca
 /etc/nginx/sites-available/iko  (symlinked into sites-enabled)
 ```
 
-Another app, `celesteagent.com`, also lives on this box (its own nginx site); iko does
-not touch it.
-
 ## Access from a new PC
 
 1. **Get the SSH key.** It's the Lightsail default key for the `us-east-1` region.
@@ -42,7 +39,7 @@ not touch it.
 3. **Add the SSH host** to `~/.ssh/config`:
    ```
    Host awqserver
-       HostName 13.219.111.35
+       HostName <server-static-ip>
        User ubuntu
        IdentityFile ~/.ssh/awqserver.pem
        IdentitiesOnly yes
